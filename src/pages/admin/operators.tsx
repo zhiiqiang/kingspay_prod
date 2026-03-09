@@ -26,7 +26,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Switch } from '@/components/ui/switch';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Label } from '@/components/ui/label';
-import { CheckCircle2, Eye, EyeOff, Inbox, Plus, RefreshCcw, SlidersHorizontal } from 'lucide-react';
+import { CheckCircle2, Inbox, Plus, RefreshCcw, SlidersHorizontal } from 'lucide-react';
 import { toast } from 'sonner';
 import { useLanguage } from '@/i18n/language-provider';
 
@@ -352,7 +352,6 @@ export function AdminOperatorPage() {
     email: '',
     password: '',
   });
-  const [showOperatorPassword, setShowOperatorPassword] = useState(false);
   const [operatorDialogOpen, setOperatorDialogOpen] = useState(false);
   const [permissionDialogOpen, setPermissionDialogOpen] = useState(false);
   const [editingOperatorId, setEditingOperatorId] = useState<string | number | null>(null);
@@ -376,7 +375,6 @@ export function AdminOperatorPage() {
       const errors: { name?: string; email?: string; password?: string } = {};
       const trimmedName = form.name.trim();
       const trimmedEmail = form.email.trim();
-      const trimmedPassword = form.password.trim();
 
       if (!trimmedName) {
         errors.name = t('operators.validation.nameRequired');
@@ -395,13 +393,14 @@ export function AdminOperatorPage() {
           errors.email = formatMessage('operators.validation.emailMax', { count: EMAIL_MAX_LENGTH });
         }
 
-        if (!trimmedPassword) {
-          errors.password = t('operators.validation.passwordRequired');
-        } else if (trimmedPassword.length < PASSWORD_MIN_LENGTH) {
-          errors.password = formatMessage('operators.validation.passwordMin', { count: PASSWORD_MIN_LENGTH });
-        } else if (trimmedPassword.length > PASSWORD_MAX_LENGTH) {
-          errors.password = formatMessage('operators.validation.passwordMax', { count: PASSWORD_MAX_LENGTH });
-        }
+        // Password is intentionally hidden in Add Operator flow for now.
+        // if (!trimmedPassword) {
+        //   errors.password = t('operators.validation.passwordRequired');
+        // } else if (trimmedPassword.length < PASSWORD_MIN_LENGTH) {
+        //   errors.password = formatMessage('operators.validation.passwordMin', { count: PASSWORD_MIN_LENGTH });
+        // } else if (trimmedPassword.length > PASSWORD_MAX_LENGTH) {
+        //   errors.password = formatMessage('operators.validation.passwordMax', { count: PASSWORD_MAX_LENGTH });
+        // }
       }
 
       return errors;
@@ -425,10 +424,9 @@ export function AdminOperatorPage() {
     return (
       !hasName ||
       !operatorForm.email.trim() ||
-      !operatorForm.password.trim() ||
       hasOperatorValidationErrors
     );
-  }, [editingOperatorId, hasOperatorValidationErrors, operatorForm.email, operatorForm.name, operatorForm.password]);
+  }, [editingOperatorId, hasOperatorValidationErrors, operatorForm.email, operatorForm.name]);
 
   const getOperatorFieldError = useCallback(
     (
@@ -687,7 +685,6 @@ export function AdminOperatorPage() {
   const saveOperator = () => {
     const trimmedName = operatorForm.name.trim();
     const trimmedEmail = operatorForm.email.trim();
-    const trimmedPassword = operatorForm.password.trim();
     const permissionsPayload = operatorPermissions;
     const operatorId = editingOperatorId;
     const errors = getOperatorErrors(operatorForm, Boolean(editingOperatorId));
@@ -719,7 +716,7 @@ export function AdminOperatorPage() {
             body: {
               name: trimmedName,
               email: trimmedEmail,
-              password: trimmedPassword,
+              // password: trimmedPassword,
               permissions: createPermissionsPayload,
             },
           });
@@ -1156,47 +1153,6 @@ export function AdminOperatorPage() {
                           <p className="text-sm text-destructive">{operatorErrors.email}</p>
                         )}
                       </div>
-                      {!editingOperatorId && (
-                        <div className="space-y-1">
-                          <Label htmlFor="operator-password" className="text-sm font-medium text-muted-foreground">
-                            {t('operators.fields.password')}
-                          </Label>
-                          <div className="relative">
-                            <Input
-                              id="operator-password"
-                              placeholder={t('operators.placeholders.password')}
-                              type={showOperatorPassword ? 'text' : 'password'}
-                              value={operatorForm.password}
-                              maxLength={PASSWORD_MAX_LENGTH}
-                              onChange={(event) => {
-                                const value = event.target.value;
-                                setOperatorForm((prev) => {
-                                  const nextForm = { ...prev, password: value };
-                                  setOperatorErrors((prevErrors) => ({
-                                    ...prevErrors,
-                                    password: getOperatorFieldError('password', nextForm, Boolean(editingOperatorId)),
-                                  }));
-                                  return nextForm;
-                                });
-                              }}
-                              className="pr-10"
-                            />
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="icon"
-                              className="absolute right-1 top-1/2 size-7 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                              aria-label={showOperatorPassword ? 'Hide password' : 'Show password'}
-                              onClick={() => setShowOperatorPassword((prev) => !prev)}
-                            >
-                              {showOperatorPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
-                            </Button>
-                          </div>
-                          {operatorErrors.password && (
-                            <p className="text-sm text-destructive">{operatorErrors.password}</p>
-                          )}
-                        </div>
-                      )}
                       {!editingOperatorId && (
                         <div className="space-y-3">
                           <div className="space-y-1">

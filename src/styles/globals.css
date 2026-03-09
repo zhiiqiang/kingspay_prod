@@ -1,0 +1,184 @@
+/* Tailwind Core */
+@import 'tailwindcss';
+
+@import 'tw-animate-css';
+
+/** Dark Mode Variant **/
+@custom-variant dark (&:is(.dark *));
+
+/** Colors - https://tailwindcss.com/docs/colors **/
+:root {
+  --background: #f8f9fb;
+  --foreground: #0b0e11;
+  --card: var(--color-white);
+  --card-foreground: #0b0e11;
+  --popover: var(--color-white);
+  --popover-foreground: #0b0e11;
+  --primary: #f0b90b;
+  --primary-foreground: #0b0e11;
+  --secondary: #eaecef;
+  --secondary-foreground: #0b0e11;
+  --muted: #f3f4f6;
+  --muted-foreground: #6a6d73;
+  --accent: #ffe899;
+  --accent-foreground: #0b0e11;
+  --destructive: var(--color-red-600);
+  --destructive-foreground: var(--color-white);
+  --chart-1: #f0b90b;
+  --chart-2: #31d0aa;
+  --chart-3: #7180ff;
+  --chart-4: #ff6b6b;
+  --chart-5: #9b51e0;
+  --border: #e6e8ea;
+  --input: #dfe2e6;
+  --ring: #f0b90b;
+  --radius: 0.5rem;
+  --sidebar-foreground: var(--foreground);
+  --sidebar-accent-soft: var(--muted);
+  --sidebar-accent-strong: var(--muted-foreground);
+  --sidebar-hover-bg: #e5e7eb;
+  --sidebar-hover-border: #d1d5db;
+  --sidebar-hover-text: #4b5563;
+}
+
+.dark {
+  --background: #0b0e11;
+  --foreground: #f5f7f9;
+  --card: #11151c;
+  --card-foreground: #f5f7f9;
+  --popover: #11151c;
+  --popover-foreground: #f5f7f9;
+  --primary: #f0b90b;
+  --primary-foreground: #0b0e11;
+  --secondary: #181a20;
+  --secondary-foreground: #f5f7f9;
+  --muted: #1e2329;
+  --muted-foreground: #9fa6b2;
+  --accent: #f0b90b;
+  --accent-foreground: #f5f7f9;
+  --destructive: var(--color-red-600);
+  --destructive-foreground: var(--color-white);
+  --chart-1: #f0b90b;
+  --chart-2: #31d0aa;
+  --chart-3: #7180ff;
+  --chart-4: #ff6b6b;
+  --chart-5: #9b51e0;
+  --border: #2b3139;
+  --input: #2b3139;
+  --ring: #f0b90b;
+  --sidebar-foreground: var(--foreground);
+  --sidebar-accent-soft: var(--muted);
+  --sidebar-accent-strong: var(--muted-foreground);
+  --sidebar-hover-bg: #2a2f36;
+  --sidebar-hover-border: #3a414a;
+  --sidebar-hover-text: #c2c8d0;
+}
+
+/** Theme Setup **/
+@theme inline {
+  /** Base Colors **/
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+
+  /** Base Styles **/
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --radius-xl: calc(var(--radius) + 4px);
+  --radius-lg: var(--radius);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-sm: calc(var(--radius) - 4px);
+
+  /** Animations **/
+  --animate-marquee: marquee var(--duration) infinite linear;
+  --animate-marquee-vertical: marquee-vertical var(--duration) linear infinite;
+
+  @keyframes marquee {
+    from {
+      transform: translateX(0);
+    }
+    to {
+      transform: translateX(calc(-100% - var(--gap)));
+    }
+  }
+  @keyframes marquee-vertical {
+    from {
+      transform: translateY(0);
+    }
+    to {
+      transform: translateY(calc(-100% - var(--gap)));
+    }
+  }
+  @keyframes vortex-spin {
+    from {
+      transform: rotate(0deg);
+    }
+    to {
+      transform: rotate(360deg);
+    }
+  }
+}
+
+/** Global Styles **/
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  *:focus-visible {
+    @apply outline-ring rounded-xs shadow-none outline-2 outline-offset-3 transition-none!;
+  }
+}
+
+/** Custom Scrollbar **/
+@layer base {
+  ::-webkit-scrollbar {
+    width: 5px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: var(--input);
+    border-radius: 5px;
+  }
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--input) transparent;
+  }
+}
+
+/** Smooth scroll **/
+html {
+  scroll-behavior: smooth;
+}
+
+/** Custom Containers **/
+@utility container {
+  @apply mx-auto max-w-none px-4 max-sm:px-3 lg:px-5;
+
+  @media (width >= --theme(--breakpoint-xl)) {
+    @apply max-w-(--breakpoint-xl);
+  }
+}
+
+@utility container-fluid {
+  @apply w-full mx-auto px-4 max-sm:px-3 lg:px-5;
+}
+
+/* Metronic Configs */
+@import './config.metronic.css';

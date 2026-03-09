@@ -1,0 +1,15 @@
+services:
+  web:
+    image: nginx:1.27-alpine
+    ports:
+      - "${PORT:-8080}:80"
+    environment:
+      # Override this per environment. Testing example:
+      # API_ROOT=http://103.235.75.231:3000
+      API_ROOT: ${API_ROOT:-http://103.235.75.231:3000}
+    volumes:
+      # Mount the build output for static assets.
+      - ../dist:/usr/share/nginx/html:ro
+      # Template consumed by the Nginx image entrypoint to inject API_ROOT.
+      - ./default.conf.template:/etc/nginx/templates/default.conf.template:ro
+    restart: unless-stopped

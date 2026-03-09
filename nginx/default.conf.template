@@ -1,0 +1,36 @@
+map $http_upgrade $connection_upgrade {
+  default upgrade;
+  '' close;
+}
+
+server {
+  listen 80;
+  # Accept requests for any host, including hosted domains like kingspay-admin.vercel.app.
+  server_name _;
+
+  # Path where the static build will be mounted.
+  root /usr/share/nginx/html;
+  index index.html;
+
+  # Reverse proxy API requests to the environment-specific backend.
+  # Set API_ROOT when starting the container, for example:
+  #   API_ROOT=http://103.235.75.231:3000 (testing)
+  #   API_ROOT=https://api.kingspay.com (production)
+  # This keeps the user-facing URL (e.g., https://kingspay-admin.vercel.app/login)
+  # while `/api` calls are forwarded to the backend without exposing its port.
+  location /api/ {
+    proxy_pass ${API_ROOT};
+    proxy_http_version 1.1;
+    proxy_set_header Upgrade $http_upgrade;
+    proxy_set_header Connection $connection_upgrade;
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+  }
+
+  # Serve the SPA and fall back to index.html for client-side routing.
+  location / {
+    try_files $uri $uri/ /index.html;
+  }
+}

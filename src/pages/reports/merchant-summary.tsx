@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { format, subDays } from 'date-fns';
 import { toast } from 'sonner';
 import { CalendarIcon, Inbox, RefreshCcw, SlidersHorizontal } from 'lucide-react';
@@ -47,6 +47,13 @@ interface MerchantSummaryResponse {
   };
 }
 
+interface MerchantSummaryFilters {
+  idMerchant: string;
+  idAgent: string;
+  dateFrom: string;
+  dateTo: string;
+}
+
 const formatAmount = (amount?: number) =>
   typeof amount === 'number' ? amount.toLocaleString('id-ID', { style: 'currency', currency: 'IDR' }) : '-';
 
@@ -71,8 +78,19 @@ export function MerchantSummaryReportPage() {
     [],
   );
 
-  const [filters, setFilters] = useState(defaultFilter);
-  const [filterDraft, setFilterDraft] = useState(defaultFilter);
+  const [filters, setFilters] = useState<MerchantSummaryFilters>(defaultFilter);
+  const [filterDraft, setFilterDraft] = useState<MerchantSummaryFilters>(defaultFilter);
+  const filterSnapshotRef = useRef<MerchantSummaryFilters | null>(null);
+  const didApplyFilterRef = useRef(false);
+
+  const activeFilterCount = useMemo(() => {
+    let count = 0;
+    if (filters.idMerchant.trim()) count += 1;
+    if (filters.idAgent.trim()) count += 1;
+    if (filters.dateFrom !== defaultFilter.dateFrom) count += 1;
+    if (filters.dateTo !== defaultFilter.dateTo) count += 1;
+    return count;
+  }, [defaultFilter.dateFrom, defaultFilter.dateTo, filters.dateFrom, filters.dateTo, filters.idAgent, filters.idMerchant]);
 
   const fetchMerchantSummary = useCallback(
     async (nextPage = pagination.page, nextLimit = pagination.limit, nextFilters = filters) => {
@@ -119,7 +137,24 @@ export function MerchantSummaryReportPage() {
     void fetchMerchantSummary(1, pagination.limit, filters);
   }, []);
 
+  const handleDialogOpenChange = useCallback(
+    (nextOpen: boolean) => {
+      if (nextOpen) {
+        filterSnapshotRef.current = filterDraft;
+        didApplyFilterRef.current = false;
+      }
+
+      if (!nextOpen && !didApplyFilterRef.current && filterSnapshotRef.current) {
+        setFilterDraft(filterSnapshotRef.current);
+      }
+
+      setIsFilterDialogOpen(nextOpen);
+    },
+    [filterDraft],
+  );
+
   const handleApplyFilters = useCallback(() => {
+    didApplyFilterRef.current = true;
     setFilters(filterDraft);
     setIsFilterDialogOpen(false);
     void fetchMerchantSummary(1, pagination.limit, filterDraft);
@@ -132,8 +167,11 @@ export function MerchantSummaryReportPage() {
   }, [fetchMerchantSummary, filters, pagination.limit, pagination.page]);
 
   const handleResetFilters = useCallback(() => {
+    didApplyFilterRef.current = true;
+    filterSnapshotRef.current = defaultFilter;
     setFilterDraft(defaultFilter);
     setFilters(defaultFilter);
+    setIsFilterDialogOpen(false);
     void fetchMerchantSummary(1, pagination.limit, defaultFilter);
   }, [defaultFilter, fetchMerchantSummary, pagination.limit]);
 
@@ -172,11 +210,12 @@ export function MerchantSummaryReportPage() {
             >
               <RefreshCcw className={cn('h-4 w-4 transition', isRefreshing && 'animate-spin')} aria-hidden />
             </Button>
-            <Dialog open={isFilterDialogOpen} onOpenChange={setIsFilterDialogOpen}>
+            <Dialog open={isFilterDialogOpen} onOpenChange={handleDialogOpenChange}>
               <DialogTrigger asChild>
                 <Button className="bg-primary text-white hover:bg-primary/90 active:bg-primary/80 flex items-center gap-2">
                   <SlidersHorizontal className="h-4 w-4" aria-hidden />
                   {t('common.filters')}
+                  <span className="rounded-full bg-white/20 px-2 py-0.5 text-xs font-semibold text-white">{activeFilterCount}</span>
                 </Button>
               </DialogTrigger>
               <DialogContent className="sm:max-w-[680px]">
@@ -185,28 +224,32 @@ export function MerchantSummaryReportPage() {
                 </DialogHeader>
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div className="space-y-2">
-                    <Label htmlFor="merchant-summary-filter-merchant">{t('reports.merchantSummary.merchantId')}</Label>
+                    <Label htmlFor="merchant-summary-filter-merchant" className="text-sm font-medium text-muted-foreground">
+                      {t('reports.merchantSummary.filters.idMerchant')}
+                    </Label>
                     <Input
                       id="merchant-summary-filter-merchant"
                       value={filterDraft.idMerchant}
                       onChange={(event) => setFilterDraft((prev) => ({ ...prev, idMerchant: event.target.value }))}
-                      placeholder={t('common.search')}
+                      placeholder={t('reports.merchantSummary.filters.idMerchantPlaceholder')}
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="merchant-summary-filter-agent">{t('reports.merchantSummary.agentId')}</Label>
+                    <Label htmlFor="merchant-summary-filter-agent" className="text-sm font-medium text-muted-foreground">
+                      {t('reports.merchantSummary.filters.idAgent')}
+                    </Label>
                     <Input
                       id="merchant-summary-filter-agent"
                       value={filterDraft.idAgent}
                       onChange={(event) => setFilterDraft((prev) => ({ ...prev, idAgent: event.target.value }))}
-                      placeholder={t('common.search')}
+                      placeholder={t('reports.merchantSummary.filters.idAgentPlaceholder')}
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label>{t('reports.merchantSummary.dateFrom')}</Label>
+                    <Label className="text-sm font-medium text-muted-foreground">{t('reports.merchantSummary.dateFrom')}</Label>
                     <Popover>
                       <PopoverTrigger asChild>
-                        <Button variant="outline" className="w-full justify-between font-normal">
+                        <Button variant="outline" className="w-full justify-between bg-background font-normal">
                           <span>{filterDraft.dateFrom}</span>
                           <CalendarIcon className="h-4 w-4" aria-hidden />
                         </Button>
@@ -226,10 +269,10 @@ export function MerchantSummaryReportPage() {
                     </Popover>
                   </div>
                   <div className="space-y-2">
-                    <Label>{t('reports.merchantSummary.dateTo')}</Label>
+                    <Label className="text-sm font-medium text-muted-foreground">{t('reports.merchantSummary.dateTo')}</Label>
                     <Popover>
                       <PopoverTrigger asChild>
-                        <Button variant="outline" className="w-full justify-between font-normal">
+                        <Button variant="outline" className="w-full justify-between bg-background font-normal">
                           <span>{filterDraft.dateTo}</span>
                           <CalendarIcon className="h-4 w-4" aria-hidden />
                         </Button>
@@ -250,7 +293,7 @@ export function MerchantSummaryReportPage() {
                   </div>
                 </div>
                 <DialogFooter>
-                  <Button variant="outline" onClick={() => setIsFilterDialogOpen(false)}>
+                  <Button variant="outline" onClick={() => handleDialogOpenChange(false)}>
                     {t('common.cancel')}
                   </Button>
                   <Button className="bg-primary text-white hover:bg-primary/90" onClick={handleApplyFilters}>
@@ -272,24 +315,24 @@ export function MerchantSummaryReportPage() {
 
         <CardContent className="space-y-4 px-6 py-4">
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-            <Card className="bg-muted/40">
+            <Card className="border-border/70 bg-background shadow-sm">
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm font-medium text-muted-foreground">
                   {t('reports.merchantSummary.totalTransaction')}
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">{summary.totalTransaksi}</div>
+                <div className="text-2xl font-semibold text-foreground">{summary.totalTransaksi}</div>
               </CardContent>
             </Card>
-            <Card className="bg-muted/40">
+            <Card className="border-border/70 bg-background shadow-sm">
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm font-medium text-muted-foreground">
                   {t('reports.merchantSummary.totalAmount')}
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">{formatAmount(summary.totalAmount)}</div>
+                <div className="text-2xl font-semibold text-foreground">{formatAmount(summary.totalAmount)}</div>
               </CardContent>
             </Card>
           </div>

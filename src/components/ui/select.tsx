@@ -144,6 +144,9 @@ function SelectContent({
               type="text"
               value={searchValue}
               onChange={(event) => onSearchValueChange?.(event.target.value)}
+              onKeyDown={(event) => {
+                event.stopPropagation();
+              }}
               placeholder={searchPlaceholder}
               className="flex h-8.5 w-full rounded-md border border-input bg-background px-3 text-[0.8125rem] text-foreground shadow-xs shadow-black/5 outline-none transition-shadow placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/30"
             />

@@ -33,7 +33,7 @@ import { ApiAuthError, apiFetch } from '@/lib/api';
 import { getStoredAuthToken, getStoredUserPermissions } from '@/lib/auth';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
-import { format, subMonths } from 'date-fns';
+import { format, subDays } from 'date-fns';
 import { cn } from '@/lib/utils';
 import {
   DropdownMenu,
@@ -126,7 +126,8 @@ const getDateOnlyString = (date: Date) => {
 
 const getStartOfDayString = (date: Date) => `${getDateOnlyString(date)} 00:00:00`;
 const getEndOfDayString = (date: Date) => `${getDateOnlyString(date)} 23:59:59`;
-const getDefaultCreatedFromDate = () => getDateOnlyString(subMonths(new Date(), 3));
+/** Default created-date range: yesterday through today (inclusive). */
+const getDefaultCreatedFromDate = () => getDateOnlyString(subDays(new Date(), 1));
 
 type PayinColumnId =
   | 'id'
@@ -161,6 +162,9 @@ interface PayinColumnConfig {
   render: (payin: PayinItem) => ReactNode;
 }
 
+/** Matches pga-be-admin transaksi list/export validation: pending | success | failed */
+const PAYIN_STATUS_OPTIONS = ['pending', 'success', 'failed'] as const;
+
 interface PayinFiltersProps {
   platformTrxId: string;
   merchantTrxId: string;
@@ -182,7 +186,6 @@ interface PayinFiltersProps {
   idSettlementRef: React.MutableRefObject<HTMLInputElement | null>;
   storeNameRef: React.MutableRefObject<HTMLInputElement | null>;
   nmidRef: React.MutableRefObject<HTMLInputElement | null>;
-  statusRef: React.MutableRefObject<HTMLInputElement | null>;
   createdFromInput: string;
   createdToInput: string;
   successFromInput: string;
@@ -191,7 +194,7 @@ interface PayinFiltersProps {
   visibleColumns: Set<PayinColumnId>;
   isRefreshing: boolean;
   isExporting: boolean;
-  onSearch: () => void;
+  onSearch: (payload: { status: string }) => void;
   onRefresh: () => void;
   onReset: () => void;
   onExport: () => void;
@@ -380,7 +383,6 @@ const PayinFilters = memo(function PayinFilters({
   idAgentRef,
   rrnRef,
   idSettlementRef,
-  statusRef,
   createdFromInput,
   createdToInput,
   successFromInput,
@@ -405,6 +407,10 @@ const PayinFilters = memo(function PayinFilters({
 }: PayinFiltersProps) {
   const { t } = useLanguage();
   const [isFilterDialogOpen, setIsFilterDialogOpen] = useState(false);
+  const [statusDraft, setStatusDraft] = useState(status);
+  useEffect(() => {
+    setStatusDraft(status);
+  }, [status]);
   const appliedRef = useRef(false);
   const snapshotRef = useRef({
     platformTrxId,
@@ -431,7 +437,7 @@ const PayinFilters = memo(function PayinFilters({
       Number(Boolean(idAgent.trim())) +
       Number(Boolean(rrn.trim())) +
       Number(Boolean(idSettlement.trim())) +
-      Number(Boolean(status.trim())) +
+      Number(status !== 'all') +
       Number(Boolean(successFromInput.trim())) +
       Number(Boolean(successToInput.trim()));
 
@@ -462,7 +468,7 @@ const PayinFilters = memo(function PayinFilters({
     if (idAgentRef.current) idAgentRef.current.value = snapshot.idAgent;
     if (rrnRef.current) rrnRef.current.value = snapshot.rrn;
     if (idSettlementRef.current) idSettlementRef.current.value = snapshot.idSettlement;
-    if (statusRef.current) statusRef.current.value = snapshot.status;
+    setStatusDraft(snapshot.status);
     onCreatedFromChange(snapshot.createdFromInput);
     onCreatedToChange(snapshot.createdToInput);
     onSuccessFromChange(snapshot.successFromInput);
@@ -479,7 +485,6 @@ const PayinFilters = memo(function PayinFilters({
     partnerTrxIdRef,
     platformTrxIdRef,
     rrnRef,
-    statusRef,
     storeNameRef,
     nmidRef,
   ]);
@@ -488,6 +493,7 @@ const PayinFilters = memo(function PayinFilters({
     (nextOpen: boolean) => {
       if (nextOpen) {
         appliedRef.current = false;
+        setStatusDraft(status);
         snapshotRef.current = {
           platformTrxId: platformTrxIdRef.current?.value ?? platformTrxId,
           merchantTrxId: merchantTrxIdRef.current?.value ?? merchantTrxId,
@@ -498,7 +504,7 @@ const PayinFilters = memo(function PayinFilters({
           idAgent: idAgentRef.current?.value ?? idAgent,
           rrn: rrnRef.current?.value ?? rrn,
           idSettlement: idSettlementRef.current?.value ?? idSettlement,
-          status: statusRef.current?.value ?? status,
+          status,
           createdFromInput,
           createdToInput,
           successFromInput,
@@ -530,7 +536,6 @@ const PayinFilters = memo(function PayinFilters({
       rrnRef,
       restoreSnapshot,
       status,
-      statusRef,
       successFromInput,
       successToInput,
     ],
@@ -661,13 +666,23 @@ const PayinFilters = memo(function PayinFilters({
                 </div>
                 <div className="flex w-full flex-col gap-2">
                   <Label htmlFor="payin-filter-status">{t('payin.filters.status')}</Label>
-                  <Input
+                  <Select
                     key={`status-${filterResetKey}`}
-                    id="payin-filter-status"
-                    defaultValue={status}
-                    ref={statusRef}
-                    placeholder={t('payin.filters.statusPlaceholder')}
-                  />
+                    value={statusDraft}
+                    onValueChange={setStatusDraft}
+                  >
+                    <SelectTrigger id="payin-filter-status" className="bg-background">
+                      <SelectValue placeholder={t('payin.filters.statusPlaceholder')} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">{t('payin.filters.statusAll')}</SelectItem>
+                      {PAYIN_STATUS_OPTIONS.map((value) => (
+                        <SelectItem key={value} value={value}>
+                          {t(`payin.status.${value}`)}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div className="flex w-full flex-col gap-2">
                   <Label htmlFor="payin-filter-rrn">{t('payin.filters.rrn')}</Label>
@@ -730,7 +745,7 @@ const PayinFilters = memo(function PayinFilters({
                 className="w-full bg-primary text-white hover:bg-primary/90 active:bg-primary/80 sm:w-auto"
                 onClick={() => {
                   appliedRef.current = true;
-                  onSearch();
+                  onSearch({ status: statusDraft });
                   setIsFilterDialogOpen(false);
                 }}
               >
@@ -979,7 +994,7 @@ export function AdminPayinPage() {
   const [idAgent, setIdAgent] = useState('');
   const [rrn, setRrn] = useState('');
   const [idSettlement, setIdSettlement] = useState('');
-  const [status, setStatus] = useState('');
+  const [status, setStatus] = useState('all');
   const [createdFromDate, setCreatedFromDate] = useState(getDefaultCreatedFromDate());
   const [createdToDate, setCreatedToDate] = useState(getDateOnlyString(new Date()));
   const [createdFromInput, setCreatedFromInput] = useState(getDefaultCreatedFromDate());
@@ -1005,7 +1020,6 @@ export function AdminPayinPage() {
   const idAgentRef = useRef<HTMLInputElement | null>(null);
   const rrnRef = useRef<HTMLInputElement | null>(null);
   const idSettlementRef = useRef<HTMLInputElement | null>(null);
-  const statusRef = useRef<HTMLInputElement | null>(null);
   const skipAutoFetchRef = useRef(false);
   const isTableBusy = isLoading || isPending;
   const tableWrapperRef = useRef<HTMLDivElement | null>(null);
@@ -1037,7 +1051,7 @@ export function AdminPayinPage() {
     setIdAgent('');
     setRrn('');
     setIdSettlement('');
-    setStatus('');
+    setStatus('all');
     setCreatedFromDate(defaultFromDate);
     setCreatedToDate(today);
     setCreatedFromInput(defaultFromDate);
@@ -1341,7 +1355,7 @@ export function AdminPayinPage() {
             ...(nextIdAgent.trim() ? { idAgent: nextIdAgent.trim() } : {}),
             ...(nextRrn.trim() ? { rrn: nextRrn.trim() } : {}),
             ...(nextIdSettlement.trim() ? { idSettlement: nextIdSettlement.trim() } : {}),
-            ...(nextStatus.trim() ? { status: nextStatus.trim() } : {}),
+            ...(nextStatus !== 'all' ? { status: nextStatus } : {}),
             createdFrom: getStartOfDayString(new Date(nextCreatedFromDate)),
             createdTo: getEndOfDayString(new Date(nextCreatedToDate)),
             ...(nextSuccessFromDate.trim()
@@ -1425,7 +1439,7 @@ export function AdminPayinPage() {
           ...(idAgent.trim() ? { idAgent: idAgent.trim() } : {}),
           ...(rrn.trim() ? { rrn: rrn.trim() } : {}),
           ...(idSettlement.trim() ? { idSettlement: idSettlement.trim() } : {}),
-          ...(status.trim() ? { status: status.trim() } : {}),
+          ...(status !== 'all' ? { status } : {}),
           createdFrom: getStartOfDayString(new Date(createdFromDate)),
           createdTo: getEndOfDayString(new Date(createdToDate)),
           ...(successFromDate.trim()
@@ -1571,7 +1585,6 @@ export function AdminPayinPage() {
       const nextIdAgent = idAgentRef.current?.value ?? idAgent;
       const nextRrn = rrnRef.current?.value ?? rrn;
       const nextIdSettlement = idSettlementRef.current?.value ?? idSettlement;
-      const nextStatus = statusRef.current?.value ?? status;
       triggerPayinSearch({
         page: 1,
         platformTrxId: nextPlatformTrxId,
@@ -1583,7 +1596,7 @@ export function AdminPayinPage() {
         idAgent: nextIdAgent,
         rrn: nextRrn,
         idSettlement: nextIdSettlement,
-        status: nextStatus,
+        status,
         createdFromDate: field === 'from' ? nextValue : createdFromInput,
         createdToDate: field === 'to' ? nextValue : createdToInput,
         successFromDate: successFromInput,
@@ -1617,7 +1630,6 @@ export function AdminPayinPage() {
     const nextIdAgent = idAgentRef.current?.value ?? idAgent;
     const nextRrn = rrnRef.current?.value ?? rrn;
     const nextIdSettlement = idSettlementRef.current?.value ?? idSettlement;
-    const nextStatus = statusRef.current?.value ?? status;
     triggerPayinSearch({
       page: 1,
       platformTrxId: nextPlatformTrxId,
@@ -1629,7 +1641,7 @@ export function AdminPayinPage() {
       idAgent: nextIdAgent,
       rrn: nextRrn,
       idSettlement: nextIdSettlement,
-      status: nextStatus,
+      status,
       createdFromDate: createdFromInput,
       createdToDate: createdToInput,
       successFromDate: successFromInput,
@@ -1662,7 +1674,6 @@ export function AdminPayinPage() {
       const nextIdAgent = idAgentRef.current?.value ?? idAgent;
       const nextRrn = rrnRef.current?.value ?? rrn;
       const nextIdSettlement = idSettlementRef.current?.value ?? idSettlement;
-      const nextStatus = statusRef.current?.value ?? status;
       triggerPayinSearch({
         page: 1,
         platformTrxId: nextPlatformTrxId,
@@ -1674,7 +1685,7 @@ export function AdminPayinPage() {
         idAgent: nextIdAgent,
         rrn: nextRrn,
         idSettlement: nextIdSettlement,
-        status: nextStatus,
+        status,
         createdFromDate: createdFromInput,
         createdToDate: createdToInput,
         successFromDate: field === 'from' ? nextValue : successFromInput,
@@ -1708,7 +1719,6 @@ export function AdminPayinPage() {
     const nextIdAgent = idAgentRef.current?.value ?? idAgent;
     const nextRrn = rrnRef.current?.value ?? rrn;
     const nextIdSettlement = idSettlementRef.current?.value ?? idSettlement;
-    const nextStatus = statusRef.current?.value ?? status;
     triggerPayinSearch({
       page: 1,
       platformTrxId: nextPlatformTrxId,
@@ -1720,7 +1730,7 @@ export function AdminPayinPage() {
       idAgent: nextIdAgent,
       rrn: nextRrn,
       idSettlement: nextIdSettlement,
-      status: nextStatus,
+      status,
       createdFromDate: createdFromInput,
       createdToDate: createdToInput,
       successFromDate: successFromInput,
@@ -1815,35 +1825,37 @@ export function AdminPayinPage() {
     [fetchPayins],
   );
 
-  const handleSearch = useCallback(() => {
-    const nextPlatformTrxId = platformTrxIdRef.current?.value ?? '';
-    const nextMerchantTrxId = merchantTrxIdRef.current?.value ?? '';
-    const nextPartnerTrxId = partnerTrxIdRef.current?.value ?? '';
-    const nextStoreName = storeNameRef.current?.value ?? '';
-    const nextNmid = nmidRef.current?.value ?? '';
-    const nextIdMerchant = idMerchantRef.current?.value ?? '';
-    const nextIdAgent = idAgentRef.current?.value ?? '';
-    const nextRrn = rrnRef.current?.value ?? '';
-    const nextIdSettlement = idSettlementRef.current?.value ?? '';
-    const nextStatus = statusRef.current?.value ?? '';
-    triggerPayinSearch({
-      page: 1,
-      platformTrxId: nextPlatformTrxId,
-      merchantTrxId: nextMerchantTrxId,
-      partnerTrxId: nextPartnerTrxId,
-      storeName: nextStoreName,
-      nmid: nextNmid,
-      idMerchant: nextIdMerchant,
-      idAgent: nextIdAgent,
-      rrn: nextRrn,
-      idSettlement: nextIdSettlement,
-      status: nextStatus,
-      createdFromDate: createdFromInput,
-      createdToDate: createdToInput,
-      successFromDate: successFromInput,
-      successToDate: successToInput,
-    });
-  }, [createdFromInput, createdToInput, successFromInput, successToInput, triggerPayinSearch]);
+  const handleSearch = useCallback(
+    ({ status: nextStatus }: { status: string }) => {
+      const nextPlatformTrxId = platformTrxIdRef.current?.value ?? '';
+      const nextMerchantTrxId = merchantTrxIdRef.current?.value ?? '';
+      const nextPartnerTrxId = partnerTrxIdRef.current?.value ?? '';
+      const nextStoreName = storeNameRef.current?.value ?? '';
+      const nextNmid = nmidRef.current?.value ?? '';
+      const nextIdMerchant = idMerchantRef.current?.value ?? '';
+      const nextIdAgent = idAgentRef.current?.value ?? '';
+      const nextRrn = rrnRef.current?.value ?? '';
+      const nextIdSettlement = idSettlementRef.current?.value ?? '';
+      triggerPayinSearch({
+        page: 1,
+        platformTrxId: nextPlatformTrxId,
+        merchantTrxId: nextMerchantTrxId,
+        partnerTrxId: nextPartnerTrxId,
+        storeName: nextStoreName,
+        nmid: nextNmid,
+        idMerchant: nextIdMerchant,
+        idAgent: nextIdAgent,
+        rrn: nextRrn,
+        idSettlement: nextIdSettlement,
+        status: nextStatus,
+        createdFromDate: createdFromInput,
+        createdToDate: createdToInput,
+        successFromDate: successFromInput,
+        successToDate: successToInput,
+      });
+    },
+    [createdFromInput, createdToInput, successFromInput, successToInput, triggerPayinSearch],
+  );
 
   useEffect(() => {
     if (skipAutoFetchRef.current) {
@@ -1930,7 +1942,6 @@ export function AdminPayinPage() {
           idAgentRef={idAgentRef}
           rrnRef={rrnRef}
           idSettlementRef={idSettlementRef}
-          statusRef={statusRef}
           createdFromInput={createdFromInput}
           createdToInput={createdToInput}
           successFromInput={successFromInput}

@@ -72,7 +72,7 @@ export function MerchantSummaryReportPage() {
     () => ({
       idMerchant: '',
       idAgent: '',
-      dateFrom: getDateOnlyString(subDays(new Date(), 30)),
+      dateFrom: getDateOnlyString(subDays(new Date(), 1)),
       dateTo: getDateOnlyString(new Date()),
     }),
     [],

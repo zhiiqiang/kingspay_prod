@@ -41,7 +41,7 @@ import {
 import { cn } from '@/lib/utils';
 import { useLanguage } from '@/i18n/language-provider';
 import { Calendar } from '@/components/ui/calendar';
-import { format, subMonths } from 'date-fns';
+import { format, subDays } from 'date-fns';
 
 interface BankItem {
   id: number;
@@ -67,7 +67,8 @@ const getDateOnlyString = (date: Date) => {
 
 const getStartOfDayString = (date: Date) => `${getDateOnlyString(date)} 00:00:00`;
 const getEndOfDayString = (date: Date) => `${getDateOnlyString(date)} 23:59:59`;
-const getDefaultFromDate = () => getDateOnlyString(subMonths(new Date(), 1));
+/** Default date range for profit / history: yesterday through today (inclusive). */
+const getDefaultFromDate = () => getDateOnlyString(subDays(new Date(), 1));
 const getDefaultToDate = () => getDateOnlyString(new Date());
 
 const getStatusBadge = (status?: string) => {
@@ -166,7 +167,7 @@ export function AdminProfitPage({ tab = 'list' }: { tab?: ProfitTab }) {
   const [withdrawAccount, setWithdrawAccount] = useState('');
   const [withdrawAmount, setWithdrawAmount] = useState('');
   const [inquiryData, setInquiryData] = useState<InquiryResponse['data'] | null>(null);
-  const [withdrawPassword, setWithdrawPassword] = useState('');
+  const [withdrawGoogleAuthCode, setWithdrawGoogleAuthCode] = useState('');
   const [isInquiring, setIsInquiring] = useState(false);
   const [isTransferring, setIsTransferring] = useState(false);
 
@@ -280,9 +281,9 @@ export function AdminProfitPage({ tab = 'list' }: { tab?: ProfitTab }) {
 
   const handleTransfer = useCallback(async () => {
     if (!inquiryData) return;
-    const pwd = withdrawPassword.trim();
-    if (!pwd) {
-      toast.error(t('profit.withdraw.validation.passwordRequired'), { style: errorToastStyle });
+    const code = withdrawGoogleAuthCode.trim();
+    if (!code) {
+      toast.error(t('profit.withdraw.validation.googleAuthCodeRequired'), { style: errorToastStyle });
       return;
     }
     setIsTransferring(true);
@@ -293,14 +294,14 @@ export function AdminProfitPage({ tab = 'list' }: { tab?: ProfitTab }) {
         accountName: inquiryData.accountName,
         bankCode: inquiryData.bankCode,
         amount: inquiryData.amount,
-        password: pwd,
+        googleAuthCode: code,
       });
       toast.success(t('profit.withdraw.transferSuccess'));
       setInquiryData(null);
       setWithdrawBank('');
       setWithdrawAccount('');
       setWithdrawAmount('');
-      setWithdrawPassword('');
+      setWithdrawGoogleAuthCode('');
       navigate('/admin/profit/history');
       void loadHistory();
     } catch (error) {
@@ -311,11 +312,11 @@ export function AdminProfitPage({ tab = 'list' }: { tab?: ProfitTab }) {
     } finally {
       setIsTransferring(false);
     }
-  }, [inquiryData, withdrawPassword, handleAuthError, t, loadHistory, navigate]);
+  }, [inquiryData, withdrawGoogleAuthCode, handleAuthError, t, loadHistory, navigate]);
 
   const resetInquiry = useCallback(() => {
     setInquiryData(null);
-    setWithdrawPassword('');
+    setWithdrawGoogleAuthCode('');
   }, []);
 
   const pageOptions = useMemo(
@@ -568,13 +569,16 @@ export function AdminProfitPage({ tab = 'list' }: { tab?: ProfitTab }) {
                     <p className="mb-2 text-sm font-medium">{t('profit.withdraw.accountName')}</p>
                     <p className="mb-4 text-lg font-semibold">{inquiryData.accountName}</p>
                     <div className="space-y-2">
-                      <Label htmlFor="profit-password">{t('profit.withdraw.password')}</Label>
+                      <Label htmlFor="profit-google-auth-code">{t('profit.withdraw.googleAuthCode')}</Label>
                       <Input
-                        id="profit-password"
-                        type="password"
-                        placeholder={t('profit.withdraw.passwordPlaceholder')}
-                        value={withdrawPassword}
-                        onChange={(e) => setWithdrawPassword(e.target.value)}
+                        id="profit-google-auth-code"
+                        type="text"
+                        inputMode="numeric"
+                        pattern="[0-9]*"
+                        maxLength={6}
+                        placeholder={t('profit.withdraw.googleAuthCodePlaceholder')}
+                        value={withdrawGoogleAuthCode}
+                        onChange={(e) => setWithdrawGoogleAuthCode(e.target.value.replace(/\D/g, ''))}
                       />
                     </div>
                     <div className="mt-4 flex gap-2">

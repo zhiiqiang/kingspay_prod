@@ -1,0 +1,53 @@
+name: Deploy Admin Frontend (Production)
+
+on:
+  push:
+    branches: [ "main" ]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      AWS_REGION: ${{ secrets.AWS_REGION }}
+      S3_BUCKET: kingspay-admin-frontend-production
+      CLOUDFRONT_DISTRIBUTION_ID: E3BP316T7H5CG1
+
+      # Production build-time env (replace with your production API URL)
+      VITE_APP_NAME: KingsPay Admin
+      VITE_APP_VERSION: "9.3.7"
+      VITE_API_ROOT: https://api-admin.kingspay.id/api
+      VITE_AUTH_REQUIRE_OTP: "false"
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - run: npm ci --legacy-peer-deps
+
+      - name: Create .env (production)
+        run: |
+          cat > .env << 'EOF'
+          VITE_APP_NAME=${VITE_APP_NAME}
+          VITE_APP_VERSION=${VITE_APP_VERSION}
+          VITE_API_ROOT=${VITE_API_ROOT}
+          VITE_AUTH_REQUIRE_OTP=${VITE_AUTH_REQUIRE_OTP}
+          EOF
+
+      - run: npm run build
+
+      - name: Configure AWS creds (static keys)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Sync to S3
+        run: aws s3 sync ./dist s3://${S3_BUCKET} --delete
+
+      - name: Invalidate CloudFront
+        run: aws cloudfront create-invalidation --distribution-id ${CLOUDFRONT_DISTRIBUTION_ID} --paths "/*"

@@ -16,6 +16,7 @@ import { AdminProfitPage } from '@/pages/admin/profit';
 import { ReconciliationListPage } from '@/pages/reconciliation/reconciliation-list';
 import { MerchantSummaryReportPage } from '@/pages/reports/merchant-summary';
 import { LoginPage } from '@/pages/auth/login';
+import { TwoFaSetupPage } from '@/pages/auth/two-fa-setup';
 import { AccountSettingsPage } from '@/pages/profile/account-settings';
 import { getStoredUserPermissions } from '@/lib/auth';
 import { AccessDeniedPage } from '@/pages/shared/access-denied';
@@ -41,6 +42,7 @@ export function AppRoutingSetup() {
       <Route path="/" element={<Navigate to="/login" replace />} />
 
       <Route path="/login" element={<LoginPage />} />
+      <Route path="/login/two-fa-setup" element={<TwoFaSetupPage />} />
 
       <Route element={<Layout4 />}>
         <Route path="/admin/dashboard" element={<AdminDashboardPage />} />

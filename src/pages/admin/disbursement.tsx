@@ -32,7 +32,7 @@ import { CalendarIcon, CheckCircle2, Eye, EyeOff, Filter, Inbox, Info, RefreshCc
 import { ApiAuthError, apiFetch } from '@/lib/api';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
-import { format, subMonths } from 'date-fns';
+import { format, subDays } from 'date-fns';
 import { cn } from '@/lib/utils';
 import {
   DropdownMenu,
@@ -135,7 +135,8 @@ const getDateOnlyString = (date: Date) => {
 
 const getStartOfDayString = (date: Date) => `${getDateOnlyString(date)} 00:00:00`;
 const getEndOfDayString = (date: Date) => `${getDateOnlyString(date)} 23:59:59`;
-const getDefaultCreatedFromDate = () => getDateOnlyString(subMonths(new Date(), 3));
+/** Default created-date range: yesterday through today (inclusive). */
+const getDefaultCreatedFromDate = () => getDateOnlyString(subDays(new Date(), 1));
 
 type DisbursementColumnId =
   | 'id'
@@ -165,6 +166,9 @@ interface DisbursementColumnConfig {
   render: (disbursement: DisbursementItem) => ReactNode;
 }
 
+/** Matches pga-be-admin disbursement list validation (inquiry rows excluded server-side) */
+const DISBURSEMENT_STATUS_OPTIONS = ['pending', 'process', 'success', 'failed'] as const;
+
 interface DisbursementFiltersProps {
   platformTrxId: string;
   merchantTrxId: string;
@@ -178,7 +182,6 @@ interface DisbursementFiltersProps {
   partnerTrxIdRef: React.MutableRefObject<HTMLInputElement | null>;
   idMerchantRef: React.MutableRefObject<HTMLInputElement | null>;
   idAgentRef: React.MutableRefObject<HTMLInputElement | null>;
-  statusRef: React.MutableRefObject<HTMLInputElement | null>;
   createdFromInput: string;
   createdToInput: string;
   successFromInput: string;
@@ -186,7 +189,7 @@ interface DisbursementFiltersProps {
   columnConfigs: DisbursementColumnConfig[];
   visibleColumns: Set<DisbursementColumnId>;
   isRefreshing: boolean;
-  onSearch: () => void;
+  onSearch: (payload: { status: string }) => void;
   onRefresh: () => void;
   onReset: () => void;
   onDatePickerApply: (value: string, field: 'from' | 'to') => void;
@@ -366,7 +369,6 @@ const DisbursementFilters = memo(function DisbursementFilters({
   partnerTrxIdRef,
   idMerchantRef,
   idAgentRef,
-  statusRef,
   createdFromInput,
   createdToInput,
   successFromInput,
@@ -389,6 +391,10 @@ const DisbursementFilters = memo(function DisbursementFilters({
 }: DisbursementFiltersProps) {
   const { t } = useLanguage();
   const [isFilterDialogOpen, setIsFilterDialogOpen] = useState(false);
+  const [statusDraft, setStatusDraft] = useState(status);
+  useEffect(() => {
+    setStatusDraft(status);
+  }, [status]);
   const appliedRef = useRef(false);
   const snapshotRef = useRef({
     platformTrxId,
@@ -409,7 +415,7 @@ const DisbursementFilters = memo(function DisbursementFilters({
       Number(Boolean(partnerTrxId.trim())) +
       Number(Boolean(idMerchant.trim())) +
       Number(Boolean(idAgent.trim())) +
-      Number(Boolean(status.trim())) +
+      Number(status !== 'all') +
       Number(Boolean(successFromInput.trim())) +
       Number(Boolean(successToInput.trim()));
 
@@ -432,7 +438,7 @@ const DisbursementFilters = memo(function DisbursementFilters({
     if (partnerTrxIdRef.current) partnerTrxIdRef.current.value = snapshot.partnerTrxId;
     if (idMerchantRef.current) idMerchantRef.current.value = snapshot.idMerchant;
     if (idAgentRef.current) idAgentRef.current.value = snapshot.idAgent;
-    if (statusRef.current) statusRef.current.value = snapshot.status;
+    setStatusDraft(snapshot.status);
     onCreatedFromChange(snapshot.createdFromInput);
     onCreatedToChange(snapshot.createdToInput);
     onSuccessFromChange(snapshot.successFromInput);
@@ -447,20 +453,20 @@ const DisbursementFilters = memo(function DisbursementFilters({
     onSuccessToChange,
     partnerTrxIdRef,
     platformTrxIdRef,
-    statusRef,
   ]);
 
   const handleDialogOpenChange = useCallback(
     (nextOpen: boolean) => {
       if (nextOpen) {
         appliedRef.current = false;
+        setStatusDraft(status);
         snapshotRef.current = {
           platformTrxId: platformTrxIdRef.current?.value ?? platformTrxId,
           merchantTrxId: merchantTrxIdRef.current?.value ?? merchantTrxId,
           partnerTrxId: partnerTrxIdRef.current?.value ?? partnerTrxId,
           idMerchant: idMerchantRef.current?.value ?? idMerchant,
           idAgent: idAgentRef.current?.value ?? idAgent,
-          status: statusRef.current?.value ?? status,
+          status,
           createdFromInput,
           createdToInput,
           successFromInput,
@@ -488,7 +494,6 @@ const DisbursementFilters = memo(function DisbursementFilters({
       platformTrxIdRef,
       restoreSnapshot,
       status,
-      statusRef,
       successFromInput,
       successToInput,
     ],
@@ -599,13 +604,23 @@ const DisbursementFilters = memo(function DisbursementFilters({
                 </div>
                 <div className="flex w-full flex-col gap-2">
                   <Label htmlFor="disbursement-filter-status">{t('disbursement.filters.status')}</Label>
-                  <Input
+                  <Select
                     key={`status-${filterResetKey}`}
-                    id="disbursement-filter-status"
-                    defaultValue={status}
-                    ref={statusRef}
-                    placeholder={t('disbursement.filters.statusPlaceholder')}
-                  />
+                    value={statusDraft}
+                    onValueChange={setStatusDraft}
+                  >
+                    <SelectTrigger id="disbursement-filter-status" className="bg-background">
+                      <SelectValue placeholder={t('disbursement.filters.statusPlaceholder')} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">{t('disbursement.filters.statusAll')}</SelectItem>
+                      {DISBURSEMENT_STATUS_OPTIONS.map((value) => (
+                        <SelectItem key={value} value={value}>
+                          {t(`disbursement.status.${value}`)}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
               <Separator />
@@ -658,7 +673,7 @@ const DisbursementFilters = memo(function DisbursementFilters({
                 className="w-full bg-primary text-white hover:bg-primary/90 active:bg-primary/80 sm:w-auto"
                 onClick={() => {
                   appliedRef.current = true;
-                  onSearch();
+                  onSearch({ status: statusDraft });
                   setIsFilterDialogOpen(false);
                 }}
               >
@@ -885,7 +900,7 @@ export function AdminDisbursementPage() {
   const [partnerTrxId, setPartnerTrxId] = useState('');
   const [idMerchant, setIdMerchant] = useState('');
   const [idAgent, setIdAgent] = useState('');
-  const [status, setStatus] = useState('');
+  const [status, setStatus] = useState('all');
   const [createdFromDate, setCreatedFromDate] = useState(getDefaultCreatedFromDate());
   const [createdToDate, setCreatedToDate] = useState(getDateOnlyString(new Date()));
   const [createdFromInput, setCreatedFromInput] = useState(getDefaultCreatedFromDate());
@@ -906,7 +921,6 @@ export function AdminDisbursementPage() {
   const partnerTrxIdRef = useRef<HTMLInputElement | null>(null);
   const idMerchantRef = useRef<HTMLInputElement | null>(null);
   const idAgentRef = useRef<HTMLInputElement | null>(null);
-  const statusRef = useRef<HTMLInputElement | null>(null);
   const skipAutoFetchRef = useRef(false);
   const isTableBusy = isLoading || isPending;
   const tableWrapperRef = useRef<HTMLDivElement | null>(null);
@@ -957,7 +971,7 @@ export function AdminDisbursementPage() {
     setPartnerTrxId('');
     setIdMerchant('');
     setIdAgent('');
-    setStatus('');
+    setStatus('all');
     setCreatedFromDate(defaultFromDate);
     setCreatedToDate(today);
     setCreatedFromInput(defaultFromDate);
@@ -1249,7 +1263,7 @@ export function AdminDisbursementPage() {
             ...(nextPartnerTrxId.trim() ? { partnerTrxId: nextPartnerTrxId.trim() } : {}),
             ...(nextIdMerchant.trim() ? { idMerchant: nextIdMerchant.trim() } : {}),
             ...(nextIdAgent.trim() ? { idAgent: nextIdAgent.trim() } : {}),
-            ...(nextStatus.trim() ? { status: nextStatus.trim() } : {}),
+            ...(nextStatus !== 'all' ? { status: nextStatus } : {}),
             createdFrom: getStartOfDayString(new Date(nextCreatedFromDate)),
             createdTo: getEndOfDayString(new Date(nextCreatedToDate)),
             ...(nextSuccessFromDate.trim()
@@ -1379,7 +1393,6 @@ export function AdminDisbursementPage() {
       const nextPartnerTrxId = partnerTrxIdRef.current?.value ?? partnerTrxId;
       const nextIdMerchant = idMerchantRef.current?.value ?? idMerchant;
       const nextIdAgent = idAgentRef.current?.value ?? idAgent;
-      const nextStatus = statusRef.current?.value ?? status;
       triggerDisbursementSearch({
         page: 1,
         platformTrxId: nextPlatformTrxId,
@@ -1387,7 +1400,7 @@ export function AdminDisbursementPage() {
         partnerTrxId: nextPartnerTrxId,
         idMerchant: nextIdMerchant,
         idAgent: nextIdAgent,
-        status: nextStatus,
+        status,
         createdFromDate: field === 'from' ? nextValue : createdFromInput,
         createdToDate: field === 'to' ? nextValue : createdToInput,
         successFromDate: successFromInput,
@@ -1415,7 +1428,6 @@ export function AdminDisbursementPage() {
     const nextPartnerTrxId = partnerTrxIdRef.current?.value ?? partnerTrxId;
     const nextIdMerchant = idMerchantRef.current?.value ?? idMerchant;
     const nextIdAgent = idAgentRef.current?.value ?? idAgent;
-    const nextStatus = statusRef.current?.value ?? status;
     triggerDisbursementSearch({
       page: 1,
       platformTrxId: nextPlatformTrxId,
@@ -1423,7 +1435,7 @@ export function AdminDisbursementPage() {
       partnerTrxId: nextPartnerTrxId,
       idMerchant: nextIdMerchant,
       idAgent: nextIdAgent,
-      status: nextStatus,
+      status,
       createdFromDate: createdFromInput,
       createdToDate: createdToInput,
       successFromDate: successFromInput,
@@ -1450,7 +1462,6 @@ export function AdminDisbursementPage() {
       const nextPartnerTrxId = partnerTrxIdRef.current?.value ?? partnerTrxId;
       const nextIdMerchant = idMerchantRef.current?.value ?? idMerchant;
       const nextIdAgent = idAgentRef.current?.value ?? idAgent;
-      const nextStatus = statusRef.current?.value ?? status;
       triggerDisbursementSearch({
         page: 1,
         platformTrxId: nextPlatformTrxId,
@@ -1458,7 +1469,7 @@ export function AdminDisbursementPage() {
         partnerTrxId: nextPartnerTrxId,
         idMerchant: nextIdMerchant,
         idAgent: nextIdAgent,
-        status: nextStatus,
+        status,
         createdFromDate: createdFromInput,
         createdToDate: createdToInput,
         successFromDate: field === 'from' ? nextValue : successFromInput,
@@ -1486,7 +1497,6 @@ export function AdminDisbursementPage() {
     const nextPartnerTrxId = partnerTrxIdRef.current?.value ?? partnerTrxId;
     const nextIdMerchant = idMerchantRef.current?.value ?? idMerchant;
     const nextIdAgent = idAgentRef.current?.value ?? idAgent;
-    const nextStatus = statusRef.current?.value ?? status;
     triggerDisbursementSearch({
       page: 1,
       platformTrxId: nextPlatformTrxId,
@@ -1494,7 +1504,7 @@ export function AdminDisbursementPage() {
       partnerTrxId: nextPartnerTrxId,
       idMerchant: nextIdMerchant,
       idAgent: nextIdAgent,
-      status: nextStatus,
+      status,
       createdFromDate: createdFromInput,
       createdToDate: createdToInput,
       successFromDate: successFromInput,
@@ -1625,27 +1635,29 @@ export function AdminDisbursementPage() {
     [fetchDisbursements],
   );
 
-  const handleSearch = useCallback(() => {
-    const nextPlatformTrxId = platformTrxIdRef.current?.value ?? '';
-    const nextMerchantTrxId = merchantTrxIdRef.current?.value ?? '';
-    const nextPartnerTrxId = partnerTrxIdRef.current?.value ?? '';
-    const nextIdMerchant = idMerchantRef.current?.value ?? '';
-    const nextIdAgent = idAgentRef.current?.value ?? '';
-    const nextStatus = statusRef.current?.value ?? '';
-    triggerDisbursementSearch({
-      page: 1,
-      platformTrxId: nextPlatformTrxId,
-      merchantTrxId: nextMerchantTrxId,
-      partnerTrxId: nextPartnerTrxId,
-      idMerchant: nextIdMerchant,
-      idAgent: nextIdAgent,
-      status: nextStatus,
-      createdFromDate: createdFromInput,
-      createdToDate: createdToInput,
-      successFromDate: successFromInput,
-      successToDate: successToInput,
-    });
-  }, [createdFromInput, createdToInput, successFromInput, successToInput, triggerDisbursementSearch]);
+  const handleSearch = useCallback(
+    ({ status: nextStatus }: { status: string }) => {
+      const nextPlatformTrxId = platformTrxIdRef.current?.value ?? '';
+      const nextMerchantTrxId = merchantTrxIdRef.current?.value ?? '';
+      const nextPartnerTrxId = partnerTrxIdRef.current?.value ?? '';
+      const nextIdMerchant = idMerchantRef.current?.value ?? '';
+      const nextIdAgent = idAgentRef.current?.value ?? '';
+      triggerDisbursementSearch({
+        page: 1,
+        platformTrxId: nextPlatformTrxId,
+        merchantTrxId: nextMerchantTrxId,
+        partnerTrxId: nextPartnerTrxId,
+        idMerchant: nextIdMerchant,
+        idAgent: nextIdAgent,
+        status: nextStatus,
+        createdFromDate: createdFromInput,
+        createdToDate: createdToInput,
+        successFromDate: successFromInput,
+        successToDate: successToInput,
+      });
+    },
+    [createdFromInput, createdToInput, successFromInput, successToInput, triggerDisbursementSearch],
+  );
 
   useEffect(() => {
     if (skipAutoFetchRef.current) {
@@ -1724,7 +1736,6 @@ export function AdminDisbursementPage() {
           partnerTrxIdRef={partnerTrxIdRef}
           idMerchantRef={idMerchantRef}
           idAgentRef={idAgentRef}
-          statusRef={statusRef}
           createdFromInput={createdFromInput}
           createdToInput={createdToInput}
           successFromInput={successFromInput}

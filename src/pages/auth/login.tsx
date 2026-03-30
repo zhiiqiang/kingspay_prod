@@ -10,6 +10,7 @@ import { toast } from 'sonner';
 import { CheckCircle2, Eye, EyeOff, MoonStar, Sun } from 'lucide-react';
 
 import { ApiResponseError, apiFetch } from '@/lib/api';
+import { authRequireOtpEnabled } from '@/lib/env';
 import { LanguageSwitcher } from '@/components/language-switcher';
 import { toAbsoluteUrl } from '@/lib/helpers';
 import { cn } from '@/lib/utils';
@@ -24,6 +25,7 @@ import { useTheme } from 'next-themes';
 import { Switch } from '@/components/ui/switch';
 
 type LoginResponse = {
+  logId?: string;
   status?: boolean;
   message?: string;
   accessToken?: string;
@@ -32,6 +34,12 @@ type LoginResponse = {
   name?: string;
   permissions?: string | string[] | null;
   redirectPath?: string;
+  requireTwoFaSetup?: boolean;
+  setupToken?: string;
+  twoFaId?: string;
+  otpauthUrl?: string;
+  wait?: number;
+  setupExpiresAt?: number;
 };
 
 type OtpResponse = {
@@ -43,6 +51,7 @@ type OtpResponse = {
 const DEFAULT_REDIRECT = '/admin/dashboard';
 const OTP_RESEND_DELAY_SECONDS = 190;
 const OTP_STORAGE_KEY = 'kp-otp-login';
+const TWO_FA_SETUP_STORAGE_KEY = 'kp-two-fa-setup';
 const OTP_SESSION_TTL_MS = 3 * 60 * 1000;
 
 type OtpSession = {
@@ -75,6 +84,12 @@ export function LoginPage() {
   }, [otpCountdown, t]);
 
   useEffect(() => {
+    if (!authRequireOtpEnabled) {
+      clearOtpSession();
+      setOtpRequested(false);
+      setOtpCountdown(0);
+      return;
+    }
     if (typeof window === 'undefined') return;
     const stored = window.sessionStorage.getItem(OTP_STORAGE_KEY);
     if (!stored) return;
@@ -195,14 +210,38 @@ export function LoginPage() {
     setIsSubmitting(true);
 
     try {
+      const loginPayload = authRequireOtpEnabled
+        ? {
+            email: email.trim(),
+            password,
+            otp,
+          }
+        : {
+            email: email.trim(),
+            password,
+          };
       const response = await apiFetch<LoginResponse>('/auth/login', {
         method: 'POST',
-        body: {
-          email: email.trim(),
-          password,
-          otp,
-        },
+        body: loginPayload,
       });
+
+      if (response.requireTwoFaSetup) {
+        if (typeof window !== 'undefined') {
+          const waitSeconds =
+            typeof response.wait === 'number' && response.wait > 0 ? Math.ceil(response.wait) : 0;
+          const setupExpiresAt = waitSeconds > 0 ? Date.now() + waitSeconds * 1000 : undefined;
+          window.sessionStorage.setItem(
+            TWO_FA_SETUP_STORAGE_KEY,
+            JSON.stringify({
+              ...response,
+              setupExpiresAt,
+            }),
+          );
+        }
+        clearOtpSession();
+        navigate('/login/two-fa-setup', { replace: true });
+        return;
+      }
 
       const authToken = response.accessToken ?? response.token;
 
@@ -229,7 +268,11 @@ export function LoginPage() {
 
   const handleCredentialsSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    await handleRequestOtp();
+    if (authRequireOtpEnabled) {
+      await handleRequestOtp();
+      return;
+    }
+    await handleSubmit(event);
   };
 
   const handleEditCredentials = () => {
@@ -358,7 +401,7 @@ export function LoginPage() {
               </Alert>
             )}
 
-            {!otpRequested ? (
+            {!authRequireOtpEnabled || !otpRequested ? (
               <form className="space-y-5" onSubmit={handleCredentialsSubmit}>
                 <div className="space-y-2 text-left">
                   <Label htmlFor="email">{t('login.emailLabel')}</Label>
@@ -406,9 +449,15 @@ export function LoginPage() {
                 <Button
                   className="w-full rounded-lg bg-[#d6b657] text-base font-semibold text-white shadow-[0_12px_35px_rgba(214,182,87,0.45)] transition hover:bg-[#c8a84b]"
                   type="submit"
-                  disabled={isRequestingOtp}
+                  disabled={authRequireOtpEnabled ? isRequestingOtp : isSubmitting}
                 >
-                  {isRequestingOtp ? t('login.requestingOtp') : t('login.requestOtp')}
+                  {authRequireOtpEnabled
+                    ? isRequestingOtp
+                      ? t('login.requestingOtp')
+                      : t('login.requestOtp')
+                    : isSubmitting
+                      ? t('login.submitting')
+                      : t('login.submit')}
                 </Button>
               </form>
             ) : (

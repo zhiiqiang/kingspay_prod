@@ -101,7 +101,7 @@ export interface TransferRequest {
   accountName: string;
   bankCode: string;
   amount: number;
-  password: string;
+  googleAuthCode: string;
 }
 
 export interface TransferResponse {

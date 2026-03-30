@@ -352,6 +352,7 @@ export function AdminOperatorPage() {
     email: '',
     password: '',
   });
+  const [showOperatorPassword, setShowOperatorPassword] = useState(false);
   const [operatorDialogOpen, setOperatorDialogOpen] = useState(false);
   const [permissionDialogOpen, setPermissionDialogOpen] = useState(false);
   const [editingOperatorId, setEditingOperatorId] = useState<string | number | null>(null);
@@ -424,8 +425,12 @@ export function AdminOperatorPage() {
     return (
       !hasName ||
       !operatorForm.email.trim() ||
+      // !operatorForm.password.trim() ||
       hasOperatorValidationErrors
     );
+    
+  // }, [editingOperatorId, hasOperatorValidationErrors, operatorForm.email, operatorForm.name, operatorForm.password]);
+
   }, [editingOperatorId, hasOperatorValidationErrors, operatorForm.email, operatorForm.name]);
 
   const getOperatorFieldError = useCallback(
@@ -685,6 +690,7 @@ export function AdminOperatorPage() {
   const saveOperator = () => {
     const trimmedName = operatorForm.name.trim();
     const trimmedEmail = operatorForm.email.trim();
+    // const trimmedPassword = operatorForm.password.trim();
     const permissionsPayload = operatorPermissions;
     const operatorId = editingOperatorId;
     const errors = getOperatorErrors(operatorForm, Boolean(editingOperatorId));
@@ -1153,6 +1159,47 @@ export function AdminOperatorPage() {
                           <p className="text-sm text-destructive">{operatorErrors.email}</p>
                         )}
                       </div>
+                      {/* {!editingOperatorId && (
+                        <div className="space-y-1">
+                          <Label htmlFor="operator-password" className="text-sm font-medium text-muted-foreground">
+                            {t('operators.fields.password')}
+                          </Label>
+                          <div className="relative">
+                            <Input
+                              id="operator-password"
+                              placeholder={t('operators.placeholders.password')}
+                              type={showOperatorPassword ? 'text' : 'password'}
+                              value={operatorForm.password}
+                              maxLength={PASSWORD_MAX_LENGTH}
+                              onChange={(event) => {
+                                const value = event.target.value;
+                                setOperatorForm((prev) => {
+                                  const nextForm = { ...prev, password: value };
+                                  setOperatorErrors((prevErrors) => ({
+                                    ...prevErrors,
+                                    password: getOperatorFieldError('password', nextForm, Boolean(editingOperatorId)),
+                                  }));
+                                  return nextForm;
+                                });
+                              }}
+                              className="pr-10"
+                            />
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              className="absolute right-1 top-1/2 size-7 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                              aria-label={showOperatorPassword ? 'Hide password' : 'Show password'}
+                              onClick={() => setShowOperatorPassword((prev) => !prev)}
+                            >
+                              {showOperatorPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+                            </Button>
+                          </div>
+                          {operatorErrors.password && (
+                            <p className="text-sm text-destructive">{operatorErrors.password}</p>
+                          )}
+                        </div>
+                      )} */}
                       {!editingOperatorId && (
                         <div className="space-y-3">
                           <div className="space-y-1">

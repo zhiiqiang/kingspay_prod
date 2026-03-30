@@ -86,7 +86,7 @@ function SelectScrollUpButton({ className, ...props }: React.ComponentProps<type
   return (
     <SelectPrimitive.ScrollUpButton
       data-slot="select-scroll-up-button"
-      className={cn('flex cursor-default items-center justify-center py-1', className)}
+      className={cn('hidden cursor-default items-center justify-center py-1 data-[state=visible]:flex', className)}
       {...props}
     >
       <ChevronUp className="h-4 w-4" />
@@ -101,7 +101,7 @@ function SelectScrollDownButton({
   return (
     <SelectPrimitive.ScrollDownButton
       data-slot="select-scroll-down-button"
-      className={cn('flex cursor-default items-center justify-center py-1', className)}
+      className={cn('hidden cursor-default items-center justify-center py-1 data-[state=visible]:flex', className)}
       {...props}
     >
       <ChevronDown className="h-4 w-4" />

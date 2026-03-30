@@ -10,6 +10,9 @@
     "lint": "eslint src --fix",
     "format": "prettier --write .",
     "preview": "vite preview",
+    "nginx:up": "node scripts/nginx-proxy.mjs up",
+    "nginx:down": "node scripts/nginx-proxy.mjs down",
+    "nginx:logs": "node scripts/nginx-proxy.mjs logs",
     "create-demo-user": "tsx scripts/create-demo-user.js",
     "debug-auth": "tsx scripts/debug-auth.js"
   },

@@ -20,6 +20,21 @@ This folder contains a lightweight Nginx setup to serve the Vite build and forwa
    PORT=80 API_ROOT=http://103.235.75.231:3000 docker compose -f nginx/docker-compose.yml up --build
    ```
 
-3. Visit your host (for example, `https://kingspay-admin.vercel.app/login` when fronted by Nginx) and API calls to `/api` will be proxied to the value of `API_ROOT`, allowing users to hit the app without needing to specify the backend port explicitly.
+3. Or use npm scripts that keep the existing build workflow untouched:
+   ```bash
+   npm run nginx:up
+   ```
 
-4. For production, set `API_ROOT` to your production endpoint before running `docker compose`.
+   Optional overrides:
+   ```bash
+   PORT=80 API_ROOT=http://103.235.75.231:3000 npm run nginx:up
+   ```
+
+   Stop the proxy:
+   ```bash
+   npm run nginx:down
+   ```
+
+4. Visit your host (for example, `https://kingspay-admin.vercel.app/login` when fronted by Nginx) and API calls to `/api` will be proxied to the value of `API_ROOT`, allowing users to hit the app without needing to specify the backend port explicitly.
+
+5. For production, set `API_ROOT` to your production endpoint before running `docker compose`.

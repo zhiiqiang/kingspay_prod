@@ -52,6 +52,12 @@ interface ReconciliationListResponse {
   page?: number;
   limit?: number;
   data: ReconciliationItem[];
+  pagination?: {
+    total?: number;
+    page?: number;
+    limit?: number;
+    totalPages?: number;
+  };
   message?: string;
 }
 
@@ -136,6 +142,8 @@ export function ReconciliationListPage() {
   const [reconciliations, setReconciliations] = useState<ReconciliationItem[]>([]);
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(10);
+  const [totalItems, setTotalItems] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
@@ -357,10 +365,10 @@ export function ReconciliationListPage() {
     });
   }, []);
 
-  const pageOptions = useMemo(() => {
-    const maxPage = reconciliations.length === limit ? page + 1 : page;
-    return Array.from({ length: Math.max(1, maxPage) }, (_, index) => index + 1);
-  }, [limit, page, reconciliations.length]);
+  const pageOptions = useMemo(
+    () => Array.from({ length: Math.max(1, totalPages) }, (_, index) => index + 1),
+    [totalPages],
+  );
 
   const activeFilterCount = useMemo(() => {
     let count = 0;
@@ -371,7 +379,7 @@ export function ReconciliationListPage() {
     return count;
   }, [filters.batchId, filters.idMerchant, filters.settlementId, filters.status]);
 
-  const hasNextPage = reconciliations.length === limit;
+  const hasNextPage = page < totalPages;
   const sortedReconciliations = useMemo(
     () =>
       [...reconciliations].sort((current, next) => {
@@ -419,14 +427,24 @@ export function ReconciliationListPage() {
           signal: activeController.signal,
         });
 
-        setReconciliations(Array.isArray(response.data) ? response.data : []);
+        const receivedRows = Array.isArray(response.data) ? response.data : [];
+        const effectiveLimit = response.pagination?.limit ?? response.limit ?? activeLimit;
+        const receivedTotalItems = response.pagination?.total ?? receivedRows.length;
+        const receivedTotalPages =
+          response.pagination?.totalPages ??
+          Math.max(1, Math.ceil(receivedTotalItems / (effectiveLimit || 1)));
 
-        if (typeof response.page === 'number' && response.page !== page) {
-          setPage(response.page);
+        setReconciliations(receivedRows);
+        setTotalItems(receivedTotalItems);
+        setTotalPages(Math.max(1, receivedTotalPages));
+
+        const effectivePage = response.pagination?.page ?? response.page;
+        if (typeof effectivePage === 'number' && effectivePage !== page) {
+          setPage(effectivePage);
         }
 
-        if (typeof response.limit === 'number' && response.limit !== limit) {
-          setLimit(response.limit);
+        if (typeof effectiveLimit === 'number' && effectiveLimit !== limit) {
+          setLimit(effectiveLimit);
         }
       } catch (error) {
         if (error instanceof ApiAuthError) {
@@ -1111,7 +1129,7 @@ export function ReconciliationListPage() {
               </div>
               <div className="flex items-center gap-2">
                 <span className="h-2 w-2 rounded-full bg-primary" aria-hidden />
-                {formatMessage('reconciliation.total', { count: reconciliations.length })}
+                {formatMessage('reconciliation.total', { count: totalItems })}
               </div>
             </div>
 

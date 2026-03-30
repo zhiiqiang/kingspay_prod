@@ -173,6 +173,7 @@ export function AdminProfitPage({ tab = 'list' }: { tab?: ProfitTab }) {
   // Withdraw form
   const [banks, setBanks] = useState<BankItem[]>([]);
   const [withdrawBank, setWithdrawBank] = useState('');
+  const [withdrawBankSearch, setWithdrawBankSearch] = useState('');
   const [withdrawAccount, setWithdrawAccount] = useState('');
   const [withdrawAmount, setWithdrawAmount] = useState('');
   const [inquiryData, setInquiryData] = useState<InquiryResponse['data'] | null>(null);
@@ -359,6 +360,15 @@ export function AdminProfitPage({ tab = 'list' }: { tab?: ProfitTab }) {
       : tab === 'withdraw'
         ? t('menu.profitWithdraw')
         : t('menu.profitWithdrawHistory');
+  const filteredBanks = useMemo(() => {
+    const keyword = withdrawBankSearch.trim().toLowerCase();
+    if (!keyword) return banks;
+    return banks.filter((bank) => {
+      const code = bank.code.toLowerCase();
+      const name = bank.name.toLowerCase();
+      return code.includes(keyword) || name.includes(keyword);
+    });
+  }, [banks, withdrawBankSearch]);
 
   return (
     <>
@@ -550,12 +560,23 @@ export function AdminProfitPage({ tab = 'list' }: { tab?: ProfitTab }) {
                 <div className="max-w-lg space-y-4">
                   <div className="grid gap-2">
                     <Label htmlFor="profit-bank">{t('profit.withdraw.bankCode')}</Label>
-                    <Select value={withdrawBank} onValueChange={(v) => { setWithdrawBank(v); setInquiryData(null); }}>
+                    <Select
+                      value={withdrawBank}
+                      onValueChange={(v) => { setWithdrawBank(v); setInquiryData(null); }}
+                      onOpenChange={(open) => {
+                        if (!open) setWithdrawBankSearch('');
+                      }}
+                    >
                       <SelectTrigger id="profit-bank">
                         <SelectValue placeholder={t('profit.withdraw.bankCodePlaceholder')} />
                       </SelectTrigger>
-                      <SelectContent>
-                        {banks.map((b) => (
+                      <SelectContent
+                        searchable
+                        searchValue={withdrawBankSearch}
+                        onSearchValueChange={setWithdrawBankSearch}
+                        searchPlaceholder={t('profit.withdraw.bankCodeSearchPlaceholder')}
+                      >
+                        {filteredBanks.map((b) => (
                           <SelectItem key={b.id} value={b.code}>
                             {b.code} - {b.name}
                           </SelectItem>

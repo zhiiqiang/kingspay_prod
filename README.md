@@ -108,6 +108,26 @@ If you want local or on-server hosting with a reverse proxy to your API, an Ngin
    proxied to `http://103.235.75.231:3000` by default or whatever value you set in `API_ROOT`. This keeps the user-facing URL clean
    while the API traffic is routed to the backend port behind Nginx. Set `API_ROOT` to your production endpoint when deploying.
 
+### Localhost via existing Nginx setup (helper script)
+
+If you already use the Nginx test environment and just want to run localhost without changing current build configuration, use:
+
+```bash
+./scripts/run-local-nginx.sh start
+```
+
+Optional overrides:
+
+```bash
+PORT=80 API_ROOT=http://103.235.75.231:3000 ./scripts/run-local-nginx.sh start
+```
+
+Stop it with:
+
+```bash
+./scripts/run-local-nginx.sh stop
+```
+
 ### Deploying to Vercel (testing environment)
 
 To build for Vercel against the testing backend, use the dedicated script:

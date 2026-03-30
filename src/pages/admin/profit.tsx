@@ -101,11 +101,12 @@ function DatePickerField({
     const d = new Date(value);
     return Number.isNaN(d.getTime()) ? undefined : d;
   }, [value]);
+  const [open, setOpen] = useState(false);
 
   return (
     <div className="flex flex-col gap-2">
       <span className="text-sm font-medium text-muted-foreground">{label}</span>
-      <Popover>
+      <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
           <Button
             variant="outline"
@@ -122,7 +123,11 @@ function DatePickerField({
           <Calendar
             mode="single"
             selected={parsed}
-            onSelect={(d) => d && onChange(getDateOnlyString(d))}
+            onSelect={(d) => {
+              if (!d) return;
+              onChange(getDateOnlyString(d));
+              setOpen(false);
+            }}
             defaultMonth={parsed}
             initialFocus
           />
@@ -147,6 +152,8 @@ export function AdminProfitPage({ tab = 'list' }: { tab?: ProfitTab }) {
   const [profitTotal, setProfitTotal] = useState(0);
   const [profitFrom, setProfitFrom] = useState(getDefaultFromDate());
   const [profitTo, setProfitTo] = useState(getDefaultToDate());
+  const [profitFilterFromDraft, setProfitFilterFromDraft] = useState(getDefaultFromDate());
+  const [profitFilterToDraft, setProfitFilterToDraft] = useState(getDefaultToDate());
   const [profitLoading, setProfitLoading] = useState(false);
   const [profitFilterOpen, setProfitFilterOpen] = useState(false);
 
@@ -158,6 +165,8 @@ export function AdminProfitPage({ tab = 'list' }: { tab?: ProfitTab }) {
   const [historyTotal, setHistoryTotal] = useState(0);
   const [historyFrom, setHistoryFrom] = useState(getDefaultFromDate());
   const [historyTo, setHistoryTo] = useState(getDefaultToDate());
+  const [historyFilterFromDraft, setHistoryFilterFromDraft] = useState(getDefaultFromDate());
+  const [historyFilterToDraft, setHistoryFilterToDraft] = useState(getDefaultToDate());
   const [historyLoading, setHistoryLoading] = useState(false);
   const [historyFilterOpen, setHistoryFilterOpen] = useState(false);
 
@@ -328,6 +337,22 @@ export function AdminProfitPage({ tab = 'list' }: { tab?: ProfitTab }) {
     [historyTotalPages],
   );
 
+  const handleProfitFilterOpenChange = useCallback((nextOpen: boolean) => {
+    setProfitFilterOpen(nextOpen);
+    if (nextOpen) {
+      setProfitFilterFromDraft(profitFrom);
+      setProfitFilterToDraft(profitTo);
+    }
+  }, [profitFrom, profitTo]);
+
+  const handleHistoryFilterOpenChange = useCallback((nextOpen: boolean) => {
+    setHistoryFilterOpen(nextOpen);
+    if (nextOpen) {
+      setHistoryFilterFromDraft(historyFrom);
+      setHistoryFilterToDraft(historyTo);
+    }
+  }, [historyFrom, historyTo]);
+
   const pageTitle =
     tab === 'list'
       ? t('menu.profitList')
@@ -372,7 +397,7 @@ export function AdminProfitPage({ tab = 'list' }: { tab?: ProfitTab }) {
                   >
                     <RefreshCcw className={cn('h-4 w-4 transition', profitLoading && 'animate-spin')} aria-hidden />
                   </Button>
-                  <Dialog open={profitFilterOpen} onOpenChange={setProfitFilterOpen}>
+                  <Dialog open={profitFilterOpen} onOpenChange={handleProfitFilterOpenChange}>
                     <DialogTrigger asChild>
                       <Button className="bg-primary text-white hover:bg-primary/90 active:bg-primary/80 flex items-center gap-2">
                         <SlidersHorizontal className="h-4 w-4" aria-hidden />
@@ -385,8 +410,16 @@ export function AdminProfitPage({ tab = 'list' }: { tab?: ProfitTab }) {
                         <DialogDescription className="sr-only">{t('profit.filters.title')}</DialogDescription>
                       </DialogHeader>
                       <DialogBody className="space-y-4">
-                        <DatePickerField label={t('profit.filters.createdFrom')} value={profitFrom} onChange={setProfitFrom} />
-                        <DatePickerField label={t('profit.filters.createdTo')} value={profitTo} onChange={setProfitTo} />
+                        <DatePickerField
+                          label={t('profit.filters.createdFrom')}
+                          value={profitFilterFromDraft}
+                          onChange={setProfitFilterFromDraft}
+                        />
+                        <DatePickerField
+                          label={t('profit.filters.createdTo')}
+                          value={profitFilterToDraft}
+                          onChange={setProfitFilterToDraft}
+                        />
                       </DialogBody>
                       <DialogFooter className="flex flex-col gap-2 sm:flex-row sm:justify-end">
                         <Button variant="outline" className="w-full sm:w-auto" onClick={() => setProfitFilterOpen(false)}>
@@ -395,8 +428,10 @@ export function AdminProfitPage({ tab = 'list' }: { tab?: ProfitTab }) {
                         <Button
                           className="w-full bg-primary text-white hover:bg-primary/90 active:bg-primary/80 sm:w-auto"
                           onClick={() => {
+                            setProfitPage(1);
+                            setProfitFrom(profitFilterFromDraft);
+                            setProfitTo(profitFilterToDraft);
                             setProfitFilterOpen(false);
-                            void loadProfitData();
                           }}
                         >
                           {t('common.search')}
@@ -622,7 +657,7 @@ export function AdminProfitPage({ tab = 'list' }: { tab?: ProfitTab }) {
                   >
                     <RefreshCcw className={cn('h-4 w-4 transition', historyLoading && 'animate-spin')} aria-hidden />
                   </Button>
-                  <Dialog open={historyFilterOpen} onOpenChange={setHistoryFilterOpen}>
+                  <Dialog open={historyFilterOpen} onOpenChange={handleHistoryFilterOpenChange}>
                     <DialogTrigger asChild>
                       <Button className="bg-primary text-white hover:bg-primary/90 active:bg-primary/80 flex items-center gap-2">
                         <SlidersHorizontal className="h-4 w-4" aria-hidden />
@@ -635,8 +670,16 @@ export function AdminProfitPage({ tab = 'list' }: { tab?: ProfitTab }) {
                         <DialogDescription className="sr-only">{t('profit.filters.title')}</DialogDescription>
                       </DialogHeader>
                       <DialogBody className="space-y-4">
-                        <DatePickerField label={t('profit.filters.createdFrom')} value={historyFrom} onChange={setHistoryFrom} />
-                        <DatePickerField label={t('profit.filters.createdTo')} value={historyTo} onChange={setHistoryTo} />
+                        <DatePickerField
+                          label={t('profit.filters.createdFrom')}
+                          value={historyFilterFromDraft}
+                          onChange={setHistoryFilterFromDraft}
+                        />
+                        <DatePickerField
+                          label={t('profit.filters.createdTo')}
+                          value={historyFilterToDraft}
+                          onChange={setHistoryFilterToDraft}
+                        />
                       </DialogBody>
                       <DialogFooter className="flex flex-col gap-2 sm:flex-row sm:justify-end">
                         <Button variant="outline" className="w-full sm:w-auto" onClick={() => setHistoryFilterOpen(false)}>
@@ -645,8 +688,10 @@ export function AdminProfitPage({ tab = 'list' }: { tab?: ProfitTab }) {
                         <Button
                           className="w-full bg-primary text-white hover:bg-primary/90 active:bg-primary/80 sm:w-auto"
                           onClick={() => {
+                            setHistoryPage(1);
+                            setHistoryFrom(historyFilterFromDraft);
+                            setHistoryTo(historyFilterToDraft);
                             setHistoryFilterOpen(false);
-                            void loadHistory();
                           }}
                         >
                           {t('common.search')}

@@ -86,7 +86,7 @@ function SelectScrollUpButton({ className, ...props }: React.ComponentProps<type
   return (
     <SelectPrimitive.ScrollUpButton
       data-slot="select-scroll-up-button"
-      className={cn('flex cursor-default items-center justify-center py-1', className)}
+      className={cn('hidden cursor-default items-center justify-center py-1 data-[state=visible]:flex', className)}
       {...props}
     >
       <ChevronUp className="h-4 w-4" />
@@ -101,7 +101,7 @@ function SelectScrollDownButton({
   return (
     <SelectPrimitive.ScrollDownButton
       data-slot="select-scroll-down-button"
-      className={cn('flex cursor-default items-center justify-center py-1', className)}
+      className={cn('hidden cursor-default items-center justify-center py-1 data-[state=visible]:flex', className)}
       {...props}
     >
       <ChevronDown className="h-4 w-4" />
@@ -113,8 +113,17 @@ function SelectContent({
   className,
   children,
   position = 'popper',
+  searchable = false,
+  searchValue = '',
+  onSearchValueChange,
+  searchPlaceholder,
   ...props
-}: React.ComponentProps<typeof SelectPrimitive.Content>) {
+}: React.ComponentProps<typeof SelectPrimitive.Content> & {
+  searchable?: boolean;
+  searchValue?: string;
+  onSearchValueChange?: (value: string) => void;
+  searchPlaceholder?: string;
+}) {
   return (
     <SelectPrimitive.Portal>
       <SelectPrimitive.Content
@@ -129,9 +138,23 @@ function SelectContent({
         {...props}
       >
         <SelectScrollUpButton />
+        {searchable && (
+          <div className="px-1.5 pt-1.5">
+            <input
+              type="text"
+              value={searchValue}
+              onChange={(event) => onSearchValueChange?.(event.target.value)}
+              onKeyDown={(event) => {
+                event.stopPropagation();
+              }}
+              placeholder={searchPlaceholder}
+              className="flex h-8.5 w-full rounded-md border border-input bg-background px-3 text-[0.8125rem] text-foreground shadow-xs shadow-black/5 outline-none transition-shadow placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/30"
+            />
+          </div>
+        )}
         <SelectPrimitive.Viewport
           className={cn(
-            'p-1.5',
+            searchable ? 'px-1.5 pb-1.5 pt-1' : 'p-1.5',
             position === 'popper' &&
               'h-[var(--radix-select-trigger-height)] w-full min-w-[var(--radix-select-trigger-width)]',
           )}

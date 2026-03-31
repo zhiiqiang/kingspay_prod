@@ -344,7 +344,7 @@ const DisbursementSummaryCards = memo(function DisbursementSummaryCards({
   );
 
   return (
-    <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+    <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
       {summaryItems.map((item) => (
         <Card key={item.key} className="relative overflow-hidden border-muted/60">
           <CardContent className="flex h-full flex-col gap-3 p-5">

@@ -63,6 +63,7 @@ interface PayinItem {
   biayaChannel?: number;
   biayaPlatform?: number;
   biayaAgent?: number;
+  netAmount?: number;
   status?: string;
   rrn?: string;
   nmid?: string;
@@ -145,6 +146,7 @@ type PayinColumnId =
   | 'biayaChannel'
   | 'biayaPlatform'
   | 'biayaAgent'
+  | 'netAmount'
   | 'status'
   | 'rrn'
   | 'idSettlement'
@@ -214,6 +216,8 @@ interface PayinSummary {
   sumBiayaChannel?: number;
   sumBiayaPlatform?: number;
   sumBiayaAgent?: number;
+  sumProfit?: number;
+  sumNetAmount?: number;
 }
 
 interface DatePickerFieldProps {
@@ -337,12 +341,30 @@ const PayinSummaryCards = memo(function PayinSummaryCards({
         label: t('payin.summary.agentFee'),
         value: formatAmount(summary?.sumBiayaAgent),
       },
+      {
+        key: 'profit',
+        label: t('payin.summary.profit'),
+        value: formatAmount(summary?.sumProfit),
+      },
+      {
+        key: 'netAmount',
+        label: t('payin.summary.netAmount'),
+        value: formatAmount(summary?.sumNetAmount),
+      },
     ],
-    [summary?.sumAmount, summary?.sumBiayaAgent, summary?.sumBiayaChannel, summary?.sumBiayaPlatform, t],
+    [
+      summary?.sumAmount,
+      summary?.sumBiayaAgent,
+      summary?.sumBiayaChannel,
+      summary?.sumBiayaPlatform,
+      summary?.sumNetAmount,
+      summary?.sumProfit,
+      t,
+    ],
   );
 
   return (
-    <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+    <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
       {summaryItems.map((item) => (
         <Card key={item.key} className="relative overflow-hidden border-muted/60">
           <CardContent className="flex h-full flex-col gap-3 p-5">
@@ -1174,6 +1196,13 @@ export function AdminPayinPage() {
         headerClassName: 'w-[160px] whitespace-nowrap',
         cellClassName: 'whitespace-nowrap',
         render: (payin) => formatAmount(payin.biayaAgent),
+      },
+      {
+        id: 'netAmount',
+        label: t('payin.table.netAmount'),
+        headerClassName: 'w-[160px] whitespace-nowrap',
+        cellClassName: 'whitespace-nowrap',
+        render: (payin) => formatAmount(payin.netAmount),
       },
       {
         id: 'status',

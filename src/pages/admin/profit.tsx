@@ -463,7 +463,7 @@ export function AdminProfitPage({ tab = 'list' }: { tab?: ProfitTab }) {
                         <TableHead className="text-right">{t('profit.table.amount')}</TableHead>
                         <TableHead>{t('profit.table.referenceType')}</TableHead>
                         <TableHead>{t('profit.table.idReference')}</TableHead>
-                        <TableHead>{t('profit.table.createdAt')}</TableHead>
+                        <TableHead className="min-w-[220px]">{t('profit.table.createdAt')}</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -508,7 +508,7 @@ export function AdminProfitPage({ tab = 'list' }: { tab?: ProfitTab }) {
                             <TableCell data-label={t('profit.table.amount')} className="text-right">{formatAmount(row.amount)}</TableCell>
                             <TableCell data-label={t('profit.table.referenceType')}>{row.referenceType}</TableCell>
                             <TableCell data-label={t('profit.table.idReference')}>{row.idReference}</TableCell>
-                            <TableCell data-label={t('profit.table.createdAt')}>{row.created_at}</TableCell>
+                            <TableCell data-label={t('profit.table.createdAt')} className="whitespace-nowrap">{row.created_at}</TableCell>
                           </TableRow>
                         ))
                       )}
@@ -562,8 +562,10 @@ export function AdminProfitPage({ tab = 'list' }: { tab?: ProfitTab }) {
         {tab === 'withdraw' && (
             <Card>
               <CardHeader className="pt-4 pb-4">
-                <CardTitle>{t('profit.withdraw.title')}</CardTitle>
-                <CardDescription>{t('profit.withdraw.description')}</CardDescription>
+                <div className="flex flex-col gap-2 max-md:self-start">
+                  <CardTitle>{t('profit.withdraw.title')}</CardTitle>
+                  <CardDescription>{t('profit.withdraw.description')}</CardDescription>
+                </div>
               </CardHeader>
               <CardContent>
                 <div className="max-w-lg space-y-4">

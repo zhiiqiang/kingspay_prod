@@ -353,8 +353,15 @@ export function MerchantSummaryReportPage() {
                 {isLoading &&
                   Array.from({ length: pagination.limit }).map((_, rowIndex) => (
                     <TableRow key={`skeleton-${rowIndex}`}>
-                      {Array.from({ length: 6 }).map((__, cellIndex) => (
-                        <TableCell key={`skeleton-cell-${rowIndex}-${cellIndex}`}>
+                      {[
+                        t('reports.merchantSummary.merchantId'),
+                        t('reports.merchantSummary.merchantName'),
+                        t('reports.merchantSummary.agentId'),
+                        t('reports.merchantSummary.agentName'),
+                        t('reports.merchantSummary.totalTransaction'),
+                        t('reports.merchantSummary.totalAmount'),
+                      ].map((label, cellIndex) => (
+                        <TableCell key={`skeleton-cell-${rowIndex}-${cellIndex}`} data-label={label}>
                           <Skeleton className="h-4 w-full" />
                         </TableCell>
                       ))}
@@ -377,12 +384,12 @@ export function MerchantSummaryReportPage() {
                 {!isLoading &&
                   rows.map((item, index) => (
                     <TableRow key={`${item.idMerchant ?? 'merchant'}-${index}`}>
-                      <TableCell>{item.idMerchant ?? '-'}</TableCell>
-                      <TableCell>{item.merchantName ?? '-'}</TableCell>
-                      <TableCell>{item.agentId ?? '-'}</TableCell>
-                      <TableCell>{item.agentName ?? '-'}</TableCell>
-                      <TableCell>{item.totalTransaksi ?? 0}</TableCell>
-                      <TableCell>{formatAmount(item.totalAmount)}</TableCell>
+                      <TableCell data-label={t('reports.merchantSummary.merchantId')}>{item.idMerchant ?? '-'}</TableCell>
+                      <TableCell data-label={t('reports.merchantSummary.merchantName')}>{item.merchantName ?? '-'}</TableCell>
+                      <TableCell data-label={t('reports.merchantSummary.agentId')}>{item.agentId ?? '-'}</TableCell>
+                      <TableCell data-label={t('reports.merchantSummary.agentName')}>{item.agentName ?? '-'}</TableCell>
+                      <TableCell data-label={t('reports.merchantSummary.totalTransaction')}>{item.totalTransaksi ?? 0}</TableCell>
+                      <TableCell data-label={t('reports.merchantSummary.totalAmount')}>{formatAmount(item.totalAmount)}</TableCell>
                     </TableRow>
                   ))}
               </TableBody>

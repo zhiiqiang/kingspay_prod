@@ -470,8 +470,17 @@ export function AdminProfitPage({ tab = 'list' }: { tab?: ProfitTab }) {
                       {profitLoading && !profitData.length ? (
                         Array.from({ length: 5 }).map((_, i) => (
                           <TableRow key={`sk-${i}`}>
-                            {Array.from({ length: 8 }).map((_, j) => (
-                              <TableCell key={j}>
+                            {[
+                              t('profit.table.id'),
+                              t('profit.table.entryType'),
+                              t('profit.table.balanceBefore'),
+                              t('profit.table.balanceAfter'),
+                              t('profit.table.amount'),
+                              t('profit.table.referenceType'),
+                              t('profit.table.idReference'),
+                              t('profit.table.createdAt'),
+                            ].map((label, j) => (
+                              <TableCell key={j} data-label={label}>
                                 <Skeleton className="h-4 w-full" />
                               </TableCell>
                             ))}
@@ -492,14 +501,14 @@ export function AdminProfitPage({ tab = 'list' }: { tab?: ProfitTab }) {
                       ) : (
                         profitData.map((row) => (
                           <TableRow key={row.id}>
-                            <TableCell className="font-medium">{row.id}</TableCell>
-                            <TableCell>{row.entryType}</TableCell>
-                            <TableCell className="text-right">{formatAmount(row.balanceBefore)}</TableCell>
-                            <TableCell className="text-right">{formatAmount(row.balanceAfter)}</TableCell>
-                            <TableCell className="text-right">{formatAmount(row.amount)}</TableCell>
-                            <TableCell>{row.referenceType}</TableCell>
-                            <TableCell>{row.idReference}</TableCell>
-                            <TableCell>{row.created_at}</TableCell>
+                            <TableCell data-label={t('profit.table.id')} className="font-medium">{row.id}</TableCell>
+                            <TableCell data-label={t('profit.table.entryType')}>{row.entryType}</TableCell>
+                            <TableCell data-label={t('profit.table.balanceBefore')} className="text-right">{formatAmount(row.balanceBefore)}</TableCell>
+                            <TableCell data-label={t('profit.table.balanceAfter')} className="text-right">{formatAmount(row.balanceAfter)}</TableCell>
+                            <TableCell data-label={t('profit.table.amount')} className="text-right">{formatAmount(row.amount)}</TableCell>
+                            <TableCell data-label={t('profit.table.referenceType')}>{row.referenceType}</TableCell>
+                            <TableCell data-label={t('profit.table.idReference')}>{row.idReference}</TableCell>
+                            <TableCell data-label={t('profit.table.createdAt')}>{row.created_at}</TableCell>
                           </TableRow>
                         ))
                       )}
@@ -742,8 +751,18 @@ export function AdminProfitPage({ tab = 'list' }: { tab?: ProfitTab }) {
                       {historyLoading && !historyData.length ? (
                         Array.from({ length: 5 }).map((_, i) => (
                           <TableRow key={`sk-h-${i}`}>
-                            {Array.from({ length: 9 }).map((_, j) => (
-                              <TableCell key={j}>
+                            {[
+                              t('profit.withdrawHistory.table.platformTrxId'),
+                              t('profit.withdrawHistory.table.channelName'),
+                              t('profit.withdrawHistory.table.accountNo'),
+                              t('profit.withdrawHistory.table.accountName'),
+                              t('profit.withdrawHistory.table.bankCode'),
+                              t('profit.withdrawHistory.table.amount'),
+                              t('profit.withdrawHistory.table.status'),
+                              t('profit.withdrawHistory.table.createdAt'),
+                              t('profit.withdrawHistory.table.successAt'),
+                            ].map((label, j) => (
+                              <TableCell key={j} data-label={label}>
                                 <Skeleton className="h-4 w-full" />
                               </TableCell>
                             ))}
@@ -766,19 +785,19 @@ export function AdminProfitPage({ tab = 'list' }: { tab?: ProfitTab }) {
                           const badge = getStatusBadge(row.status);
                           return (
                             <TableRow key={row.id}>
-                              <TableCell className="font-mono text-sm">{row.platformTrxId}</TableCell>
-                              <TableCell>{row.channelName}</TableCell>
-                              <TableCell>{row.accountNo}</TableCell>
-                              <TableCell>{row.accountName}</TableCell>
-                              <TableCell>{row.bankCode}</TableCell>
-                              <TableCell className="text-right">{formatAmount(row.amount)}</TableCell>
-                              <TableCell>
+                              <TableCell data-label={t('profit.withdrawHistory.table.platformTrxId')} className="font-mono text-sm">{row.platformTrxId}</TableCell>
+                              <TableCell data-label={t('profit.withdrawHistory.table.channelName')}>{row.channelName}</TableCell>
+                              <TableCell data-label={t('profit.withdrawHistory.table.accountNo')}>{row.accountNo}</TableCell>
+                              <TableCell data-label={t('profit.withdrawHistory.table.accountName')}>{row.accountName}</TableCell>
+                              <TableCell data-label={t('profit.withdrawHistory.table.bankCode')}>{row.bankCode}</TableCell>
+                              <TableCell data-label={t('profit.withdrawHistory.table.amount')} className="text-right">{formatAmount(row.amount)}</TableCell>
+                              <TableCell data-label={t('profit.withdrawHistory.table.status')}>
                                 <Badge variant={badge.variant} appearance="light">
                                   {badge.label}
                                 </Badge>
                               </TableCell>
-                              <TableCell>{row.created_at ?? '-'}</TableCell>
-                              <TableCell>{row.success_at ?? '-'}</TableCell>
+                              <TableCell data-label={t('profit.withdrawHistory.table.createdAt')}>{row.created_at ?? '-'}</TableCell>
+                              <TableCell data-label={t('profit.withdrawHistory.table.successAt')}>{row.success_at ?? '-'}</TableCell>
                             </TableRow>
                           );
                         })

@@ -212,6 +212,19 @@ export function MerchantSummaryReportPage() {
     [fetchMerchantSummary, filters],
   );
 
+  const summaryItems = useMemo(
+    () => [
+      { key: 'totalTransaksi', label: t('reports.merchantSummary.totalTransaction'), value: String(summary.totalTransaksi), badge: 'TRX' },
+      { key: 'totalAmount', label: t('reports.merchantSummary.totalAmount'), value: formatAmount(summary.totalAmount), badge: 'IDR' },
+      { key: 'totalProfit', label: t('reports.merchantSummary.totalProfit'), value: formatAmount(summary.totalProfit), badge: 'IDR' },
+      { key: 'feeAgent', label: t('reports.merchantSummary.feeAgent'), value: formatAmount(summary.feeAgent), badge: 'IDR' },
+      { key: 'feePlatform', label: t('reports.merchantSummary.feePlatform'), value: formatAmount(summary.feePlatform), badge: 'IDR' },
+      { key: 'feeChannel', label: t('reports.merchantSummary.feeChannel'), value: formatAmount(summary.feeChannel), badge: 'IDR' },
+      { key: 'netAmount', label: t('reports.merchantSummary.netAmount'), value: formatAmount(summary.netAmount), badge: 'IDR' },
+    ],
+    [summary, t],
+  );
+
   return (
     <div className="container space-y-8 pb-10 pt-4">
       <div className="space-y-2">
@@ -337,63 +350,20 @@ export function MerchantSummaryReportPage() {
         <Separator />
 
         <CardContent className="space-y-4 px-6 py-4">
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
-            <Card className="border-border/70 bg-background shadow-sm">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">{t('reports.merchantSummary.totalTransaction')}</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-semibold text-foreground">{summary.totalTransaksi}</div>
-              </CardContent>
-            </Card>
-            <Card className="border-border/70 bg-background shadow-sm">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">{t('reports.merchantSummary.totalAmount')}</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-semibold text-foreground">{formatAmount(summary.totalAmount)}</div>
-              </CardContent>
-            </Card>
-            <Card className="border-border/70 bg-background shadow-sm">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">{t('reports.merchantSummary.totalProfit')}</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-semibold text-foreground">{formatAmount(summary.totalProfit)}</div>
-              </CardContent>
-            </Card>
-            <Card className="border-border/70 bg-background shadow-sm">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">{t('reports.merchantSummary.feeAgent')}</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-semibold text-foreground">{formatAmount(summary.feeAgent)}</div>
-              </CardContent>
-            </Card>
-            <Card className="border-border/70 bg-background shadow-sm">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">{t('reports.merchantSummary.feePlatform')}</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-semibold text-foreground">{formatAmount(summary.feePlatform)}</div>
-              </CardContent>
-            </Card>
-            <Card className="border-border/70 bg-background shadow-sm">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">{t('reports.merchantSummary.feeChannel')}</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-semibold text-foreground">{formatAmount(summary.feeChannel)}</div>
-              </CardContent>
-            </Card>
-            <Card className="border-border/70 bg-background shadow-sm">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">{t('reports.merchantSummary.netAmount')}</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-semibold text-foreground">{formatAmount(summary.netAmount)}</div>
-              </CardContent>
-            </Card>
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+            {summaryItems.map((item) => (
+              <Card key={item.key} className="relative overflow-hidden border-muted/60">
+                <CardContent className="flex h-full flex-col gap-3 p-5">
+                  <div className="flex items-center justify-between text-sm text-muted-foreground">
+                    <span className="font-medium">{item.label}</span>
+                    <span className="rounded-full bg-primary/10 px-2 py-1 text-[10px] font-semibold uppercase text-primary">
+                      {item.badge}
+                    </span>
+                  </div>
+                  <div className="max-w-full break-words text-2xl font-semibold text-foreground">{item.value}</div>
+                </CardContent>
+              </Card>
+            ))}
           </div>
 
           <div className="overflow-x-auto sm:rounded-md sm:border">

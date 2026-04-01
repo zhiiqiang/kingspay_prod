@@ -352,7 +352,7 @@ export function MerchantSummaryReportPage() {
         <CardContent className="space-y-4 px-6 py-4">
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
             {summaryItems.map((item) => (
-              <Card key={item.key} className="relative overflow-hidden border-muted/60">
+              <Card key={item.key} className="relative overflow-hidden border-muted/60 bg-muted/30">
                 <CardContent className="flex h-full flex-col gap-3 p-5">
                   <div className="flex items-center justify-between text-sm text-muted-foreground">
                     <span className="font-medium">{item.label}</span>
@@ -370,17 +370,17 @@ export function MerchantSummaryReportPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>{t('reports.merchantSummary.merchantId')}</TableHead>
-                  <TableHead>{t('reports.merchantSummary.merchantName')}</TableHead>
-                  <TableHead>{t('reports.merchantSummary.agentId')}</TableHead>
-                  <TableHead>{t('reports.merchantSummary.agentName')}</TableHead>
-                  <TableHead>{t('reports.merchantSummary.totalTransaction')}</TableHead>
-                  <TableHead>{t('reports.merchantSummary.totalAmount')}</TableHead>
-                  <TableHead>{t('reports.merchantSummary.totalProfit')}</TableHead>
-                  <TableHead>{t('reports.merchantSummary.feeAgent')}</TableHead>
-                  <TableHead>{t('reports.merchantSummary.feePlatform')}</TableHead>
-                  <TableHead>{t('reports.merchantSummary.feeChannel')}</TableHead>
-                  <TableHead>{t('reports.merchantSummary.netAmount')}</TableHead>
+                  <TableHead className="min-w-[120px]">{t('reports.merchantSummary.merchantId')}</TableHead>
+                  <TableHead className="min-w-[180px]">{t('reports.merchantSummary.merchantName')}</TableHead>
+                  <TableHead className="min-w-[120px]">{t('reports.merchantSummary.agentId')}</TableHead>
+                  <TableHead className="min-w-[180px]">{t('reports.merchantSummary.agentName')}</TableHead>
+                  <TableHead className="min-w-[140px]">{t('reports.merchantSummary.totalTransaction')}</TableHead>
+                  <TableHead className="min-w-[150px]">{t('reports.merchantSummary.totalAmount')}</TableHead>
+                  <TableHead className="min-w-[150px]">{t('reports.merchantSummary.totalProfit')}</TableHead>
+                  <TableHead className="min-w-[140px]">{t('reports.merchantSummary.feeAgent')}</TableHead>
+                  <TableHead className="min-w-[150px]">{t('reports.merchantSummary.feePlatform')}</TableHead>
+                  <TableHead className="min-w-[150px]">{t('reports.merchantSummary.feeChannel')}</TableHead>
+                  <TableHead className="min-w-[150px]">{t('reports.merchantSummary.netAmount')}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -428,12 +428,12 @@ export function MerchantSummaryReportPage() {
                       <TableCell data-label={t('reports.merchantSummary.agentId')}>{item.agentId ?? '-'}</TableCell>
                       <TableCell data-label={t('reports.merchantSummary.agentName')}>{item.agentName ?? '-'}</TableCell>
                       <TableCell data-label={t('reports.merchantSummary.totalTransaction')}>{item.totalTransaksi ?? 0}</TableCell>
-                      <TableCell data-label={t('reports.merchantSummary.totalAmount')}>{formatAmount(item.totalAmount)}</TableCell>
-                      <TableCell data-label={t('reports.merchantSummary.totalProfit')}>{formatAmount(item.totalProfit)}</TableCell>
-                      <TableCell data-label={t('reports.merchantSummary.feeAgent')}>{formatAmount(item.feeAgent)}</TableCell>
-                      <TableCell data-label={t('reports.merchantSummary.feePlatform')}>{formatAmount(item.feePlatform)}</TableCell>
-                      <TableCell data-label={t('reports.merchantSummary.feeChannel')}>{formatAmount(item.feeChannel)}</TableCell>
-                      <TableCell data-label={t('reports.merchantSummary.netAmount')}>{formatAmount(item.netAmount)}</TableCell>
+                      <TableCell data-label={t('reports.merchantSummary.totalAmount')} className="whitespace-nowrap">{formatAmount(item.totalAmount)}</TableCell>
+                      <TableCell data-label={t('reports.merchantSummary.totalProfit')} className="whitespace-nowrap">{formatAmount(item.totalProfit)}</TableCell>
+                      <TableCell data-label={t('reports.merchantSummary.feeAgent')} className="whitespace-nowrap">{formatAmount(item.feeAgent)}</TableCell>
+                      <TableCell data-label={t('reports.merchantSummary.feePlatform')} className="whitespace-nowrap">{formatAmount(item.feePlatform)}</TableCell>
+                      <TableCell data-label={t('reports.merchantSummary.feeChannel')} className="whitespace-nowrap">{formatAmount(item.feeChannel)}</TableCell>
+                      <TableCell data-label={t('reports.merchantSummary.netAmount')} className="whitespace-nowrap">{formatAmount(item.netAmount)}</TableCell>
                     </TableRow>
                   ))}
               </TableBody>

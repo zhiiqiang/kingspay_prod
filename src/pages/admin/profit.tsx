@@ -458,9 +458,9 @@ export function AdminProfitPage({ tab = 'list' }: { tab?: ProfitTab }) {
                       <TableRow>
                         <TableHead className="w-[70px]">{t('profit.table.id')}</TableHead>
                         <TableHead>{t('profit.table.entryType')}</TableHead>
-                        <TableHead className="text-right">{t('profit.table.balanceBefore')}</TableHead>
-                        <TableHead className="text-right">{t('profit.table.balanceAfter')}</TableHead>
-                        <TableHead className="text-right">{t('profit.table.amount')}</TableHead>
+                        <TableHead className="min-w-[170px] text-right">{t('profit.table.balanceBefore')}</TableHead>
+                        <TableHead className="min-w-[170px] text-right">{t('profit.table.balanceAfter')}</TableHead>
+                        <TableHead className="min-w-[160px] text-right">{t('profit.table.amount')}</TableHead>
                         <TableHead>{t('profit.table.referenceType')}</TableHead>
                         <TableHead>{t('profit.table.idReference')}</TableHead>
                         <TableHead className="min-w-[220px]">{t('profit.table.createdAt')}</TableHead>
@@ -503,9 +503,9 @@ export function AdminProfitPage({ tab = 'list' }: { tab?: ProfitTab }) {
                           <TableRow key={row.id}>
                             <TableCell data-label={t('profit.table.id')} className="font-medium">{row.id}</TableCell>
                             <TableCell data-label={t('profit.table.entryType')}>{row.entryType}</TableCell>
-                            <TableCell data-label={t('profit.table.balanceBefore')} className="text-right">{formatAmount(row.balanceBefore)}</TableCell>
-                            <TableCell data-label={t('profit.table.balanceAfter')} className="text-right">{formatAmount(row.balanceAfter)}</TableCell>
-                            <TableCell data-label={t('profit.table.amount')} className="text-right">{formatAmount(row.amount)}</TableCell>
+                            <TableCell data-label={t('profit.table.balanceBefore')} className="whitespace-nowrap text-right">{formatAmount(row.balanceBefore)}</TableCell>
+                            <TableCell data-label={t('profit.table.balanceAfter')} className="whitespace-nowrap text-right">{formatAmount(row.balanceAfter)}</TableCell>
+                            <TableCell data-label={t('profit.table.amount')} className="whitespace-nowrap text-right">{formatAmount(row.amount)}</TableCell>
                             <TableCell data-label={t('profit.table.referenceType')}>{row.referenceType}</TableCell>
                             <TableCell data-label={t('profit.table.idReference')}>{row.idReference}</TableCell>
                             <TableCell data-label={t('profit.table.createdAt')} className="whitespace-nowrap">{row.created_at}</TableCell>

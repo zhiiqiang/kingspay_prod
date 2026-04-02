@@ -181,7 +181,7 @@ export function ReconciliationListPage() {
   const [uploadResult, setUploadResult] = useState<ReconciliationUploadResponse | null>(null);
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set());
   const [selectedBatchId, setSelectedBatchId] = useState<number | null>(null);
-  const [selectedMerchantIds, setSelectedMerchantIds] = useState<Set<number>>(new Set());
+  const [selectedRowKeys, setSelectedRowKeys] = useState<Set<string>>(new Set());
 
   const closeActionDialog = useCallback(() => {
     setActionDialogOpen(false);
@@ -209,28 +209,36 @@ export function ReconciliationListPage() {
     setActionDialogOpen(true);
   }, [t]);
 
+  const getSelectionKey = useCallback((item: ReconciliationItem) => {
+    if (!item.idMerchant) return null;
+    return `${item.batch_id}:${item.idMerchant}`;
+  }, []);
+
   const selectedMerchantIdsArray = useMemo(
-    () => Array.from(selectedMerchantIds),
-    [selectedMerchantIds],
+    () =>
+      Array.from(selectedRowKeys)
+        .map((key) => Number(key.split(':')[1]))
+        .filter((value) => Number.isFinite(value)),
+    [selectedRowKeys],
   );
 
   const selectedCount = selectedMerchantIdsArray.length;
 
   const clearSelectedItems = useCallback(() => {
     setSelectedBatchId(null);
-    setSelectedMerchantIds(new Set());
+    setSelectedRowKeys(new Set());
   }, []);
 
   const toggleItemSelection = useCallback((item: ReconciliationItem, checked: boolean) => {
-    const merchantId = item.idMerchant;
-    if (!merchantId) return;
+    const selectionKey = getSelectionKey(item);
+    if (!selectionKey) return;
 
-    setSelectedMerchantIds((previous) => {
+    setSelectedRowKeys((previous) => {
       const next = new Set(previous);
       if (checked) {
-        next.add(merchantId);
+        next.add(selectionKey);
       } else {
-        next.delete(merchantId);
+        next.delete(selectionKey);
       }
 
       if (next.size === 0) {
@@ -243,7 +251,7 @@ export function ReconciliationListPage() {
     if (checked && selectedBatchId === null) {
       setSelectedBatchId(item.batch_id);
     }
-  }, [selectedBatchId]);
+  }, [getSelectionKey, selectedBatchId]);
 
   const handleBulkActionClick = useCallback((type: ReconciliationActionType) => {
     if (!selectedBatchId || selectedMerchantIdsArray.length === 0) {
@@ -1186,31 +1194,35 @@ export function ReconciliationListPage() {
                 )}
 
                 {!isLoading &&
-                  sortedReconciliations.map((item, index) => (
-                    <TableRow key={`${item.batch_id}-${index}`} className="group">
-                      <TableCell data-label={t('reconciliation.table.select')} className="whitespace-nowrap">
-                        <Checkbox
-                          checked={item.idMerchant ? selectedMerchantIds.has(item.idMerchant) : false}
-                          disabled={
-                            !item.idMerchant ||
-                            item.status?.toLowerCase() !== 'pending' ||
-                            (selectedBatchId !== null && item.batch_id !== selectedBatchId)
-                          }
-                          onCheckedChange={(checked) => toggleItemSelection(item, checked === true)}
-                          aria-label={t('reconciliation.table.select')}
-                        />
-                      </TableCell>
-                      {visibleColumnConfigs.map((column) => (
-                        <TableCell
-                          key={column.id}
-                          data-label={column.label}
-                          className={column.cellClassName ?? 'whitespace-nowrap'}
-                        >
-                          {column.render(item)}
+                  sortedReconciliations.map((item, index) => {
+                    const selectionKey = getSelectionKey(item);
+
+                    return (
+                      <TableRow key={`${item.batch_id}-${index}`} className="group">
+                        <TableCell data-label={t('reconciliation.table.select')} className="whitespace-nowrap">
+                          <Checkbox
+                            checked={Boolean(selectionKey && selectedRowKeys.has(selectionKey))}
+                            disabled={
+                              !item.idMerchant ||
+                              item.status?.toLowerCase() !== 'pending' ||
+                              (selectedBatchId !== null && item.batch_id !== selectedBatchId)
+                            }
+                            onCheckedChange={(checked) => toggleItemSelection(item, checked === true)}
+                            aria-label={t('reconciliation.table.select')}
+                          />
                         </TableCell>
-                      ))}
-                    </TableRow>
-                  ))}
+                        {visibleColumnConfigs.map((column) => (
+                          <TableCell
+                            key={column.id}
+                            data-label={column.label}
+                            className={column.cellClassName ?? 'whitespace-nowrap'}
+                          >
+                            {column.render(item)}
+                          </TableCell>
+                        ))}
+                      </TableRow>
+                    );
+                  })}
               </TableBody>
             </Table>
           </div>

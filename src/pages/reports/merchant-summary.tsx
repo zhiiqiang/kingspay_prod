@@ -31,12 +31,22 @@ interface MerchantSummaryItem {
   agentName?: string | null;
   totalTransaksi?: number;
   totalAmount?: number;
+  totalProfit?: number;
+  feeAgent?: number;
+  feePlatform?: number;
+  feeChannel?: number;
+  netAmount?: number;
 }
 
 interface MerchantSummaryResponse {
   summary?: {
     totalTransaksi?: number;
     totalAmount?: number;
+    totalProfit?: number;
+    feeAgent?: number;
+    feePlatform?: number;
+    feeChannel?: number;
+    netAmount?: number;
   };
   data?: MerchantSummaryItem[];
   pagination?: {
@@ -62,7 +72,15 @@ const getDateOnlyString = (date: Date) => format(date, 'yyyy-MM-dd');
 export function MerchantSummaryReportPage() {
   const { t } = useLanguage();
   const [rows, setRows] = useState<MerchantSummaryItem[]>([]);
-  const [summary, setSummary] = useState({ totalTransaksi: 0, totalAmount: 0 });
+  const [summary, setSummary] = useState({
+    totalTransaksi: 0,
+    totalAmount: 0,
+    totalProfit: 0,
+    feeAgent: 0,
+    feePlatform: 0,
+    feeChannel: 0,
+    netAmount: 0,
+  });
   const [pagination, setPagination] = useState({ total: 0, page: 1, limit: 10, totalPages: 1 });
   const [isLoading, setIsLoading] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -113,6 +131,11 @@ export function MerchantSummaryReportPage() {
         setSummary({
           totalTransaksi: response.summary?.totalTransaksi ?? 0,
           totalAmount: response.summary?.totalAmount ?? 0,
+          totalProfit: response.summary?.totalProfit ?? 0,
+          feeAgent: response.summary?.feeAgent ?? 0,
+          feePlatform: response.summary?.feePlatform ?? 0,
+          feeChannel: response.summary?.feeChannel ?? 0,
+          netAmount: response.summary?.netAmount ?? 0,
         });
         setPagination({
           total: nextPagination.total ?? 0,
@@ -187,6 +210,19 @@ export function MerchantSummaryReportPage() {
       void fetchMerchantSummary(1, limit, filters);
     },
     [fetchMerchantSummary, filters],
+  );
+
+  const summaryItems = useMemo(
+    () => [
+      { key: 'totalTransaksi', label: t('reports.merchantSummary.totalTransaction'), value: String(summary.totalTransaksi), badge: 'TRX' },
+      { key: 'totalAmount', label: t('reports.merchantSummary.totalAmount'), value: formatAmount(summary.totalAmount), badge: 'IDR' },
+      { key: 'totalProfit', label: t('reports.merchantSummary.totalProfit'), value: formatAmount(summary.totalProfit), badge: 'IDR' },
+      { key: 'feeAgent', label: t('reports.merchantSummary.feeAgent'), value: formatAmount(summary.feeAgent), badge: 'IDR' },
+      { key: 'feePlatform', label: t('reports.merchantSummary.feePlatform'), value: formatAmount(summary.feePlatform), badge: 'IDR' },
+      { key: 'feeChannel', label: t('reports.merchantSummary.feeChannel'), value: formatAmount(summary.feeChannel), badge: 'IDR' },
+      { key: 'netAmount', label: t('reports.merchantSummary.netAmount'), value: formatAmount(summary.netAmount), badge: 'IDR' },
+    ],
+    [summary, t],
   );
 
   return (
@@ -314,47 +350,57 @@ export function MerchantSummaryReportPage() {
         <Separator />
 
         <CardContent className="space-y-4 px-6 py-4">
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-            <Card className="border-border/70 bg-background shadow-sm">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">
-                  {t('reports.merchantSummary.totalTransaction')}
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-semibold text-foreground">{summary.totalTransaksi}</div>
-              </CardContent>
-            </Card>
-            <Card className="border-border/70 bg-background shadow-sm">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">
-                  {t('reports.merchantSummary.totalAmount')}
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-semibold text-foreground">{formatAmount(summary.totalAmount)}</div>
-              </CardContent>
-            </Card>
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+            {summaryItems.map((item) => (
+              <Card key={item.key} className="relative overflow-hidden border-muted/60 bg-muted/30">
+                <CardContent className="flex h-full flex-col gap-3 p-5">
+                  <div className="flex items-center justify-between text-sm text-muted-foreground">
+                    <span className="font-medium">{item.label}</span>
+                    <span className="rounded-full bg-primary/10 px-2 py-1 text-[10px] font-semibold uppercase text-primary">
+                      {item.badge}
+                    </span>
+                  </div>
+                  <div className="max-w-full break-words text-2xl font-semibold text-foreground">{item.value}</div>
+                </CardContent>
+              </Card>
+            ))}
           </div>
 
           <div className="overflow-x-auto sm:rounded-md sm:border">
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>{t('reports.merchantSummary.merchantId')}</TableHead>
-                  <TableHead>{t('reports.merchantSummary.merchantName')}</TableHead>
-                  <TableHead>{t('reports.merchantSummary.agentId')}</TableHead>
-                  <TableHead>{t('reports.merchantSummary.agentName')}</TableHead>
-                  <TableHead>{t('reports.merchantSummary.totalTransaction')}</TableHead>
-                  <TableHead>{t('reports.merchantSummary.totalAmount')}</TableHead>
+                  <TableHead className="min-w-[120px]">{t('reports.merchantSummary.merchantId')}</TableHead>
+                  <TableHead className="min-w-[180px]">{t('reports.merchantSummary.merchantName')}</TableHead>
+                  <TableHead className="min-w-[120px]">{t('reports.merchantSummary.agentId')}</TableHead>
+                  <TableHead className="min-w-[180px]">{t('reports.merchantSummary.agentName')}</TableHead>
+                  <TableHead className="min-w-[140px]">{t('reports.merchantSummary.totalTransaction')}</TableHead>
+                  <TableHead className="min-w-[150px]">{t('reports.merchantSummary.totalAmount')}</TableHead>
+                  <TableHead className="min-w-[150px]">{t('reports.merchantSummary.totalProfit')}</TableHead>
+                  <TableHead className="min-w-[140px]">{t('reports.merchantSummary.feeAgent')}</TableHead>
+                  <TableHead className="min-w-[150px]">{t('reports.merchantSummary.feePlatform')}</TableHead>
+                  <TableHead className="min-w-[150px]">{t('reports.merchantSummary.feeChannel')}</TableHead>
+                  <TableHead className="min-w-[150px]">{t('reports.merchantSummary.netAmount')}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {isLoading &&
                   Array.from({ length: pagination.limit }).map((_, rowIndex) => (
                     <TableRow key={`skeleton-${rowIndex}`}>
-                      {Array.from({ length: 6 }).map((__, cellIndex) => (
-                        <TableCell key={`skeleton-cell-${rowIndex}-${cellIndex}`}>
+                      {[
+                        t('reports.merchantSummary.merchantId'),
+                        t('reports.merchantSummary.merchantName'),
+                        t('reports.merchantSummary.agentId'),
+                        t('reports.merchantSummary.agentName'),
+                        t('reports.merchantSummary.totalTransaction'),
+                        t('reports.merchantSummary.totalAmount'),
+                        t('reports.merchantSummary.totalProfit'),
+                        t('reports.merchantSummary.feeAgent'),
+                        t('reports.merchantSummary.feePlatform'),
+                        t('reports.merchantSummary.feeChannel'),
+                        t('reports.merchantSummary.netAmount'),
+                      ].map((label, cellIndex) => (
+                        <TableCell key={`skeleton-cell-${rowIndex}-${cellIndex}`} data-label={label}>
                           <Skeleton className="h-4 w-full" />
                         </TableCell>
                       ))}
@@ -363,7 +409,7 @@ export function MerchantSummaryReportPage() {
 
                 {!isLoading && rows.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={6} className="py-10 text-center text-sm text-muted-foreground">
+                    <TableCell colSpan={11} className="py-10 text-center text-sm text-muted-foreground">
                       <div className="flex flex-col items-center justify-center gap-3">
                         <div className="flex h-14 w-14 items-center justify-center rounded-full bg-muted">
                           <Inbox className="h-7 w-7" aria-hidden />
@@ -377,12 +423,17 @@ export function MerchantSummaryReportPage() {
                 {!isLoading &&
                   rows.map((item, index) => (
                     <TableRow key={`${item.idMerchant ?? 'merchant'}-${index}`}>
-                      <TableCell>{item.idMerchant ?? '-'}</TableCell>
-                      <TableCell>{item.merchantName ?? '-'}</TableCell>
-                      <TableCell>{item.agentId ?? '-'}</TableCell>
-                      <TableCell>{item.agentName ?? '-'}</TableCell>
-                      <TableCell>{item.totalTransaksi ?? 0}</TableCell>
-                      <TableCell>{formatAmount(item.totalAmount)}</TableCell>
+                      <TableCell data-label={t('reports.merchantSummary.merchantId')}>{item.idMerchant ?? '-'}</TableCell>
+                      <TableCell data-label={t('reports.merchantSummary.merchantName')}>{item.merchantName ?? '-'}</TableCell>
+                      <TableCell data-label={t('reports.merchantSummary.agentId')}>{item.agentId ?? '-'}</TableCell>
+                      <TableCell data-label={t('reports.merchantSummary.agentName')}>{item.agentName ?? '-'}</TableCell>
+                      <TableCell data-label={t('reports.merchantSummary.totalTransaction')}>{item.totalTransaksi ?? 0}</TableCell>
+                      <TableCell data-label={t('reports.merchantSummary.totalAmount')} className="whitespace-nowrap">{formatAmount(item.totalAmount)}</TableCell>
+                      <TableCell data-label={t('reports.merchantSummary.totalProfit')} className="whitespace-nowrap">{formatAmount(item.totalProfit)}</TableCell>
+                      <TableCell data-label={t('reports.merchantSummary.feeAgent')} className="whitespace-nowrap">{formatAmount(item.feeAgent)}</TableCell>
+                      <TableCell data-label={t('reports.merchantSummary.feePlatform')} className="whitespace-nowrap">{formatAmount(item.feePlatform)}</TableCell>
+                      <TableCell data-label={t('reports.merchantSummary.feeChannel')} className="whitespace-nowrap">{formatAmount(item.feeChannel)}</TableCell>
+                      <TableCell data-label={t('reports.merchantSummary.netAmount')} className="whitespace-nowrap">{formatAmount(item.netAmount)}</TableCell>
                     </TableRow>
                   ))}
               </TableBody>

@@ -62,6 +62,7 @@ interface DisbursementItem {
   biayaChannel?: number;
   biayaPlatform?: number;
   biayaAgent?: number;
+  totalProfit?: number;
   status?: string;
   created_at?: string;
   success_at?: string;
@@ -153,6 +154,7 @@ type DisbursementColumnId =
   | 'biayaChannel'
   | 'biayaPlatform'
   | 'biayaAgent'
+  | 'totalProfit'
   | 'status'
   | 'created_at'
   | 'success_at'
@@ -208,6 +210,7 @@ interface DisbursementSummary {
   sumBiayaChannel?: number;
   sumBiayaPlatform?: number;
   sumBiayaAgent?: number;
+  sumTotalProfit?: number;
 }
 
 interface DatePickerFieldProps {
@@ -331,12 +334,17 @@ const DisbursementSummaryCards = memo(function DisbursementSummaryCards({
         label: t('disbursement.summary.agentFee'),
         value: formatAmount(summary?.sumBiayaAgent),
       },
+      {
+        key: 'profit',
+        label: t('disbursement.summary.totalProfit'),
+        value: formatAmount(summary?.sumTotalProfit),
+      },
     ],
-    [summary?.sumAmount, summary?.sumBiayaAgent, summary?.sumBiayaChannel, summary?.sumBiayaPlatform, t],
+    [summary?.sumAmount, summary?.sumBiayaAgent, summary?.sumBiayaChannel, summary?.sumBiayaPlatform, summary?.sumTotalProfit, t],
   );
 
   return (
-    <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+    <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
       {summaryItems.map((item) => (
         <Card key={item.key} className="relative overflow-hidden border-muted/60">
           <CardContent className="flex h-full flex-col gap-3 p-5">
@@ -1087,6 +1095,13 @@ export function AdminDisbursementPage() {
         headerClassName: 'w-[160px] whitespace-nowrap',
         cellClassName: 'whitespace-nowrap',
         render: (disbursement) => formatAmount(disbursement.biayaAgent),
+      },
+      {
+        id: 'totalProfit',
+        label: t('disbursement.table.totalProfit'),
+        headerClassName: 'w-[160px] whitespace-nowrap',
+        cellClassName: 'whitespace-nowrap',
+        render: (disbursement) => formatAmount(disbursement.totalProfit),
       },
       {
         id: 'status',

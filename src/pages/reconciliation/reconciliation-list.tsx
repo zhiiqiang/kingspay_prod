@@ -22,6 +22,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -179,6 +180,8 @@ export function ReconciliationListPage() {
   const [uploadResultDialogOpen, setUploadResultDialogOpen] = useState(false);
   const [uploadResult, setUploadResult] = useState<ReconciliationUploadResponse | null>(null);
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set());
+  const [selectedBatchId, setSelectedBatchId] = useState<number | null>(null);
+  const [selectedRowKeys, setSelectedRowKeys] = useState<Set<string>>(new Set());
 
   const closeActionDialog = useCallback(() => {
     setActionDialogOpen(false);
@@ -193,11 +196,80 @@ export function ReconciliationListPage() {
     }, t(key));
 
   const handleActionClick = useCallback((item: ReconciliationItem, type: ReconciliationActionType) => {
+    if (!item.idMerchant) {
+      toast.error(t('reconciliation.toast.missingMerchant'), {
+        duration: 1500,
+        style: ERROR_TOAST_STYLE,
+      });
+      return;
+    }
     setActionItem(item);
     setActionType(type);
     setActionPassword('');
     setActionDialogOpen(true);
+  }, [t]);
+
+  const getSelectionKey = useCallback((item: ReconciliationItem) => {
+    if (!item.idMerchant) return null;
+    return `${item.batch_id}:${item.idMerchant}`;
   }, []);
+
+  const selectedMerchantIdsArray = useMemo(
+    () =>
+      Array.from(selectedRowKeys)
+        .map((key) => Number(key.split(':')[1]))
+        .filter((value) => Number.isFinite(value)),
+    [selectedRowKeys],
+  );
+
+  const selectedCount = selectedMerchantIdsArray.length;
+
+  const clearSelectedItems = useCallback(() => {
+    setSelectedBatchId(null);
+    setSelectedRowKeys(new Set());
+  }, []);
+
+  const toggleItemSelection = useCallback((item: ReconciliationItem, checked: boolean) => {
+    const selectionKey = getSelectionKey(item);
+    if (!selectionKey) return;
+
+    setSelectedRowKeys((previous) => {
+      const next = new Set(previous);
+      if (checked) {
+        next.add(selectionKey);
+      } else {
+        next.delete(selectionKey);
+      }
+
+      if (next.size === 0) {
+        setSelectedBatchId(null);
+      }
+
+      return next;
+    });
+
+    if (checked && selectedBatchId === null) {
+      setSelectedBatchId(item.batch_id);
+    }
+  }, [getSelectionKey, selectedBatchId]);
+
+  const handleBulkActionClick = useCallback((type: ReconciliationActionType) => {
+    if (!selectedBatchId || selectedMerchantIdsArray.length === 0) {
+      toast.error(t('reconciliation.toast.selectItem'), {
+        duration: 1500,
+        style: ERROR_TOAST_STYLE,
+      });
+      return;
+    }
+
+    setActionItem({
+      batch_id: selectedBatchId,
+      status: 'pending',
+    });
+    setActionType(type);
+    setActionPassword('');
+    setActionDialogOpen(true);
+  }, [selectedBatchId, selectedMerchantIdsArray.length, t]);
 
   const columnConfigs = useMemo<ReconciliationColumnConfig[]>(
     () => [
@@ -478,8 +550,14 @@ export function ReconciliationListPage() {
       return;
     }
 
-    const merchantId = actionItem.idMerchant;
-    if (!merchantId) {
+    const isBulkAction = selectedMerchantIdsArray.length > 0 && selectedBatchId === actionItem.batch_id;
+    const merchantIds = isBulkAction
+      ? selectedMerchantIdsArray
+      : actionItem.idMerchant
+        ? [actionItem.idMerchant]
+        : [];
+
+    if (merchantIds.length === 0) {
       toast.error(t('reconciliation.toast.missingMerchant'), {
         duration: 1500,
         style: ERROR_TOAST_STYLE,
@@ -502,7 +580,7 @@ export function ReconciliationListPage() {
         {
           method: 'POST',
           body: {
-            merchantIds: [merchantId],
+            merchantIds,
             password: actionPassword.trim(),
           },
         },
@@ -516,11 +594,14 @@ export function ReconciliationListPage() {
                 ? 'reconciliation.actions.approved'
                 : 'reconciliation.actions.rejected',
             ),
-            merchantId,
+            merchantId: merchantIds.join(', '),
           }),
         { duration: 1500, icon: <CheckCircle2 className="h-5 w-5 text-emerald-500" /> },
       );
       closeActionDialog();
+      if (isBulkAction) {
+        clearSelectedItems();
+      }
       await fetchReconciliations();
     } catch (error) {
       if (error instanceof ApiAuthError) {
@@ -537,7 +618,18 @@ export function ReconciliationListPage() {
     } finally {
       setIsActionSubmitting(false);
     }
-  }, [actionItem, actionPassword, actionType, closeActionDialog, fetchReconciliations, formatMessage, t]);
+  }, [
+    actionItem,
+    actionPassword,
+    actionType,
+    clearSelectedItems,
+    closeActionDialog,
+    fetchReconciliations,
+    formatMessage,
+    selectedBatchId,
+    selectedMerchantIdsArray,
+    t,
+  ]);
 
   const handleRefresh = useCallback(async () => {
     const MIN_SPIN_DURATION_MS = 500;
@@ -1022,10 +1114,37 @@ export function ReconciliationListPage() {
         </CardHeader>
         <Separator />
         <CardContent className="flex flex-col gap-4 px-5 py-4 md:gap-5 md:px-6">
+          {selectedCount > 0 && (
+            <div className="flex flex-col gap-3 rounded-lg border border-border bg-muted/30 p-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="text-sm text-foreground">
+                {formatMessage('reconciliation.bulk.selectedCount', { count: selectedCount })}
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <Button
+                  size="sm"
+                  className="bg-emerald-500 text-white hover:bg-emerald-600 active:bg-emerald-700"
+                  onClick={() => handleBulkActionClick('approve')}
+                >
+                  {t('reconciliation.bulk.approve')}
+                </Button>
+                <Button
+                  size="sm"
+                  className="bg-rose-600 text-white hover:bg-rose-700 active:bg-rose-800"
+                  onClick={() => handleBulkActionClick('reject')}
+                >
+                  {t('reconciliation.bulk.reject')}
+                </Button>
+                <Button size="sm" variant="outline" onClick={clearSelectedItems}>
+                  {t('reconciliation.bulk.clear')}
+                </Button>
+              </div>
+            </div>
+          )}
           <div className="relative overflow-x-auto sm:rounded-md sm:border" ref={tableWrapperRef}>
             <Table style={{ minWidth: calculatedMinTableWidth }}>
               <TableHeader>
                 <TableRow>
+                  <TableHead className="w-[56px] whitespace-nowrap">{t('reconciliation.table.select')}</TableHead>
                   {visibleColumnConfigs.length === 0 ? (
                     <TableHead className="whitespace-nowrap">{t('reconciliation.table.noColumns')}</TableHead>
                   ) : (
@@ -1041,6 +1160,9 @@ export function ReconciliationListPage() {
                 {isLoading &&
                   Array.from({ length: 10 }).map((_, rowIndex) => (
                     <TableRow key={`skeleton-${rowIndex}`}>
+                      <TableCell data-label={t('reconciliation.table.select')}>
+                        <Skeleton className="h-4 w-4 rounded-sm" />
+                      </TableCell>
                       {(visibleColumnConfigs.length > 0 ? visibleColumnConfigs : [null]).map((column, colIndex) => (
                         <TableCell
                           key={`skeleton-cell-${rowIndex}-${colIndex}`}
@@ -1055,7 +1177,7 @@ export function ReconciliationListPage() {
                 {!isLoading && reconciliations.length === 0 && (
                   <TableRow>
                     <TableCell
-                      colSpan={Math.max(visibleColumnConfigs.length, 1)}
+                      colSpan={Math.max(visibleColumnConfigs.length + 1, 1)}
                       className="py-10 text-center text-sm text-muted-foreground"
                     >
                       <div className="flex flex-col items-center justify-center gap-3">
@@ -1072,19 +1194,35 @@ export function ReconciliationListPage() {
                 )}
 
                 {!isLoading &&
-                  sortedReconciliations.map((item, index) => (
-                    <TableRow key={`${item.batch_id}-${index}`} className="group">
-                      {visibleColumnConfigs.map((column) => (
-                        <TableCell
-                          key={column.id}
-                          data-label={column.label}
-                          className={column.cellClassName ?? 'whitespace-nowrap'}
-                        >
-                          {column.render(item)}
+                  sortedReconciliations.map((item, index) => {
+                    const selectionKey = getSelectionKey(item);
+
+                    return (
+                      <TableRow key={`${item.batch_id}-${index}`} className="group">
+                        <TableCell data-label={t('reconciliation.table.select')} className="whitespace-nowrap">
+                          <Checkbox
+                            checked={Boolean(selectionKey && selectedRowKeys.has(selectionKey))}
+                            disabled={
+                              !item.idMerchant ||
+                              item.status?.toLowerCase() !== 'pending' ||
+                              (selectedBatchId !== null && item.batch_id !== selectedBatchId)
+                            }
+                            onCheckedChange={(checked) => toggleItemSelection(item, checked === true)}
+                            aria-label={t('reconciliation.table.select')}
+                          />
                         </TableCell>
-                      ))}
-                    </TableRow>
-                  ))}
+                        {visibleColumnConfigs.map((column) => (
+                          <TableCell
+                            key={column.id}
+                            data-label={column.label}
+                            className={column.cellClassName ?? 'whitespace-nowrap'}
+                          >
+                            {column.render(item)}
+                          </TableCell>
+                        ))}
+                      </TableRow>
+                    );
+                  })}
               </TableBody>
             </Table>
           </div>
@@ -1187,9 +1325,15 @@ export function ReconciliationListPage() {
                 </span>
               </div>
               <div className="flex items-center justify-between">
-                <span>{t('reconciliation.filters.merchantId')}</span>
+                <span>
+                  {selectedMerchantIdsArray.length > 0 && selectedBatchId === actionItem?.batch_id
+                    ? t('reconciliation.bulk.selectedMerchants')
+                    : t('reconciliation.filters.merchantId')}
+                </span>
                 <span className="font-medium text-foreground">
-                  {formatOptionalValue(actionItem?.idMerchant)}
+                  {selectedMerchantIdsArray.length > 0 && selectedBatchId === actionItem?.batch_id
+                    ? selectedMerchantIdsArray.length
+                    : formatOptionalValue(actionItem?.idMerchant)}
                 </span>
               </div>
               <div className="flex items-center justify-between">

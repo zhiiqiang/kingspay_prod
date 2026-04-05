@@ -28,7 +28,8 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { ApiAuthError, apiFetch } from '@/lib/api';
+import { ApiAuthError } from '@/lib/api';
+import { fetchBankAccounts, type BankAccountItem } from '@/lib/bank-account-api';
 import {
   fetchProfitData,
   fetchWithdrawHistory,
@@ -42,18 +43,6 @@ import { cn } from '@/lib/utils';
 import { useLanguage } from '@/i18n/language-provider';
 import { Calendar } from '@/components/ui/calendar';
 import { format, subDays } from 'date-fns';
-
-interface BankItem {
-  id: number;
-  code: string;
-  name: string;
-  status: string;
-}
-
-interface BankListResponse {
-  status: boolean;
-  data: BankItem[];
-}
 
 const formatAmount = (amount?: number) =>
   typeof amount === 'number' ? amount.toLocaleString('id-ID', { style: 'currency', currency: 'IDR' }) : '-';
@@ -171,10 +160,9 @@ export function AdminProfitPage({ tab = 'list' }: { tab?: ProfitTab }) {
   const [historyFilterOpen, setHistoryFilterOpen] = useState(false);
 
   // Withdraw form
-  const [banks, setBanks] = useState<BankItem[]>([]);
-  const [withdrawBank, setWithdrawBank] = useState('');
-  const [withdrawBankSearch, setWithdrawBankSearch] = useState('');
-  const [withdrawAccount, setWithdrawAccount] = useState('');
+  const [bankAccounts, setBankAccounts] = useState<BankAccountItem[]>([]);
+  const [withdrawBankAccountId, setWithdrawBankAccountId] = useState('');
+  const [withdrawBankAccountSearch, setWithdrawBankAccountSearch] = useState('');
   const [withdrawAmount, setWithdrawAmount] = useState('');
   const [inquiryData, setInquiryData] = useState<InquiryResponse['data'] | null>(null);
   const [withdrawGoogleAuthCode, setWithdrawGoogleAuthCode] = useState('');
@@ -189,12 +177,12 @@ export function AdminProfitPage({ tab = 'list' }: { tab?: ProfitTab }) {
     return false;
   }, [t]);
 
-  const loadBanks = useCallback(async () => {
+  const loadBankAccounts = useCallback(async () => {
     try {
-      const res = await apiFetch<BankListResponse>(`bank-list?page=1&limit=200&status=active`, { method: 'GET' });
-      setBanks(res.data ?? []);
+      const res = await fetchBankAccounts({ page: 1, limit: 200 });
+      setBankAccounts(res.data ?? []);
     } catch {
-      setBanks([]);
+      setBankAccounts([]);
     }
   }, []);
 
@@ -254,18 +242,13 @@ export function AdminProfitPage({ tab = 'list' }: { tab?: ProfitTab }) {
   }, [tab, loadHistory]);
 
   useEffect(() => {
-    if (tab === 'withdraw') void loadBanks();
-  }, [tab, loadBanks]);
+    if (tab === 'withdraw') void loadBankAccounts();
+  }, [tab, loadBankAccounts]);
 
   const handleInquiry = useCallback(async () => {
-    const bank = withdrawBank.trim();
-    const account = withdrawAccount.trim();
+    const selectedAccount = bankAccounts.find((item) => String(item.id) === withdrawBankAccountId);
     const amount = Number(withdrawAmount);
-    if (!bank) {
-      toast.error(t('profit.withdraw.validation.bankRequired'), { style: errorToastStyle });
-      return;
-    }
-    if (!account) {
+    if (!selectedAccount) {
       toast.error(t('profit.withdraw.validation.accountRequired'), { style: errorToastStyle });
       return;
     }
@@ -276,7 +259,11 @@ export function AdminProfitPage({ tab = 'list' }: { tab?: ProfitTab }) {
     setIsInquiring(true);
     setInquiryData(null);
     try {
-      const res = await inquiryWithdraw({ bankCode: bank, accountNo: account, amount });
+      const res = await inquiryWithdraw({
+        bankCode: selectedAccount.bankCode,
+        accountNo: selectedAccount.accountNo,
+        amount,
+      });
       setInquiryData(res.data);
       toast.success(t('profit.withdraw.inquirySuccess'));
     } catch (error) {
@@ -287,7 +274,7 @@ export function AdminProfitPage({ tab = 'list' }: { tab?: ProfitTab }) {
     } finally {
       setIsInquiring(false);
     }
-  }, [withdrawBank, withdrawAccount, withdrawAmount, handleAuthError, t]);
+  }, [bankAccounts, withdrawBankAccountId, withdrawAmount, handleAuthError, t]);
 
   const handleTransfer = useCallback(async () => {
     if (!inquiryData) return;
@@ -308,8 +295,7 @@ export function AdminProfitPage({ tab = 'list' }: { tab?: ProfitTab }) {
       });
       toast.success(t('profit.withdraw.transferSuccess'));
       setInquiryData(null);
-      setWithdrawBank('');
-      setWithdrawAccount('');
+      setWithdrawBankAccountId('');
       setWithdrawAmount('');
       setWithdrawGoogleAuthCode('');
       navigate('/admin/profit/history');
@@ -360,15 +346,16 @@ export function AdminProfitPage({ tab = 'list' }: { tab?: ProfitTab }) {
       : tab === 'withdraw'
         ? t('menu.profitWithdraw')
         : t('menu.profitWithdrawHistory');
-  const filteredBanks = useMemo(() => {
-    const keyword = withdrawBankSearch.trim().toLowerCase();
-    if (!keyword) return banks;
-    return banks.filter((bank) => {
-      const code = bank.code.toLowerCase();
-      const name = bank.name.toLowerCase();
-      return code.includes(keyword) || name.includes(keyword);
+  const filteredBankAccounts = useMemo(() => {
+    const keyword = withdrawBankAccountSearch.trim().toLowerCase();
+    if (!keyword) return bankAccounts;
+    return bankAccounts.filter((account) => {
+      const bankCode = account.bankCode.toLowerCase();
+      const accountNo = account.accountNo.toLowerCase();
+      const accountName = account.accountName.toLowerCase();
+      return bankCode.includes(keyword) || accountNo.includes(keyword) || accountName.includes(keyword);
     });
-  }, [banks, withdrawBankSearch]);
+  }, [bankAccounts, withdrawBankAccountSearch]);
 
   return (
     <>
@@ -559,39 +546,30 @@ export function AdminProfitPage({ tab = 'list' }: { tab?: ProfitTab }) {
               <CardContent>
                 <div className="max-w-lg space-y-4">
                   <div className="grid gap-2">
-                    <Label htmlFor="profit-bank">{t('profit.withdraw.bankCode')}</Label>
+                    <Label htmlFor="profit-bank-account">{t('profit.withdraw.bankAccount')}</Label>
                     <Select
-                      value={withdrawBank}
-                      onValueChange={(v) => { setWithdrawBank(v); setInquiryData(null); }}
+                      value={withdrawBankAccountId}
+                      onValueChange={(v) => { setWithdrawBankAccountId(v); setInquiryData(null); }}
                       onOpenChange={(open) => {
-                        if (!open) setWithdrawBankSearch('');
+                        if (!open) setWithdrawBankAccountSearch('');
                       }}
                     >
-                      <SelectTrigger id="profit-bank">
-                        <SelectValue placeholder={t('profit.withdraw.bankCodePlaceholder')} />
+                      <SelectTrigger id="profit-bank-account">
+                        <SelectValue placeholder={t('profit.withdraw.bankAccountPlaceholder')} />
                       </SelectTrigger>
                       <SelectContent
                         searchable
-                        searchValue={withdrawBankSearch}
-                        onSearchValueChange={setWithdrawBankSearch}
-                        searchPlaceholder={t('profit.withdraw.bankCodeSearchPlaceholder')}
+                        searchValue={withdrawBankAccountSearch}
+                        onSearchValueChange={setWithdrawBankAccountSearch}
+                        searchPlaceholder={t('profit.withdraw.bankAccountSearchPlaceholder')}
                       >
-                        {filteredBanks.map((b) => (
-                          <SelectItem key={b.id} value={b.code}>
-                            {b.code} - {b.name}
+                        {filteredBankAccounts.map((account) => (
+                          <SelectItem key={account.id} value={String(account.id)}>
+                            {account.bankCode} - {account.accountNo} - {account.accountName}
                           </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
-                  </div>
-                  <div className="grid gap-2">
-                    <Label htmlFor="profit-account">{t('profit.withdraw.accountNo')}</Label>
-                    <Input
-                      id="profit-account"
-                      placeholder={t('profit.withdraw.accountNoPlaceholder')}
-                      value={withdrawAccount}
-                      onChange={(e) => { setWithdrawAccount(e.target.value); setInquiryData(null); }}
-                    />
                   </div>
                   <div className="grid gap-2">
                     <Label htmlFor="profit-amount">{t('profit.withdraw.amount')}</Label>

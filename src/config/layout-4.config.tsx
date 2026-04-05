@@ -83,6 +83,7 @@ export const MENU_SIDEBAR: MenuConfig = [
       { title: 'Profit List', titleKey: 'menu.profitList', path: '/admin/profit/list' },
       { title: 'Withdraw', titleKey: 'menu.profitWithdraw', path: '/admin/profit/withdraw' },
       { title: 'Withdraw History', titleKey: 'menu.profitWithdrawHistory', path: '/admin/profit/history' },
+      { title: 'Bank Account', titleKey: 'menu.profitBankAccount', path: '/admin/profit/bank-account' },
     ],
   },
   {

@@ -152,6 +152,11 @@ export const menuSections: MenuSection[] = [
         titleKey: 'menu.profitWithdrawHistory',
         path: '/admin/profit/history',
       },
+      {
+        title: 'Bank Account',
+        titleKey: 'menu.profitBankAccount',
+        path: '/admin/profit/bank-account',
+      },
     ],
   },
   {

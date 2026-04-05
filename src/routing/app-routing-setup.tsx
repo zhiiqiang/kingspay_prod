@@ -13,6 +13,7 @@ import { AdminChannelStorePage } from '@/pages/admin/channel-store';
 import { AdminChannelDisbursementPage } from '@/pages/admin/channel-disbursement';
 import { AdminBankListPage } from '@/pages/admin/bank-list';
 import { AdminProfitPage } from '@/pages/admin/profit';
+import { AdminBankAccountPage } from '@/pages/admin/bank-account';
 import { ReconciliationListPage } from '@/pages/reconciliation/reconciliation-list';
 import { MerchantSummaryReportPage } from '@/pages/reports/merchant-summary';
 import { LoginPage } from '@/pages/auth/login';
@@ -130,6 +131,7 @@ export function AppRoutingSetup() {
         <Route path="/admin/profit/list" element={<AdminProfitPage tab="list" />} />
         <Route path="/admin/profit/withdraw" element={<AdminProfitPage tab="withdraw" />} />
         <Route path="/admin/profit/history" element={<AdminProfitPage tab="history" />} />
+        <Route path="/admin/profit/bank-account" element={<AdminBankAccountPage />} />
         <Route path="/admin/*" element={<NotFoundPage />} />
         <Route
           path="/reconciliation/list"

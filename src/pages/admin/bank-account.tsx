@@ -1,0 +1,530 @@
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { CheckCircle2, Inbox, Loader2, Pencil, Plus, RefreshCcw, SlidersHorizontal } from 'lucide-react';
+import { toast } from 'sonner';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Dialog,
+  DialogBody,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Separator } from '@/components/ui/separator';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { ApiAuthError } from '@/lib/api';
+import {
+  createBankAccount,
+  fetchBankAccountById,
+  fetchBankAccounts,
+  updateBankAccount,
+  type BankAccountItem,
+} from '@/lib/bank-account-api';
+import { cn } from '@/lib/utils';
+import { useLanguage } from '@/i18n/language-provider';
+
+const errorToastStyle = {
+  border: '2px solid #fda4af',
+  background: '#fff1f2',
+  color: '#f43f5e',
+  boxShadow: '0 4px 10px rgba(244, 63, 94, 0.12)',
+  padding: '0.5rem',
+} as const;
+
+export function AdminBankAccountPage() {
+  const { t } = useLanguage();
+  const [items, setItems] = useState<BankAccountItem[]>([]);
+  const [page, setPage] = useState(1);
+  const [limit] = useState(10);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalItems, setTotalItems] = useState(0);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+
+  const [filters, setFilters] = useState({ keyword: '' });
+  const [filterInputs, setFilterInputs] = useState({ keyword: '' });
+  const [isFilterDialogOpen, setIsFilterDialogOpen] = useState(false);
+  const appliedRef = useRef(false);
+
+  const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [isLoadingDetail, setIsLoadingDetail] = useState(false);
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [createForm, setCreateForm] = useState({ bankCode: '', accountNo: '', accountName: '' });
+  const [editForm, setEditForm] = useState({ bankCode: '', accountNo: '', accountName: '' });
+  const [formErrors, setFormErrors] = useState<{ bankCode?: string; accountNo?: string; accountName?: string }>({});
+
+  const pageOptions = useMemo(() => {
+    const calculatedPages = Math.max(1, totalPages || Math.ceil(totalItems / limit) || 1);
+    return Array.from({ length: calculatedPages }, (_, index) => index + 1);
+  }, [limit, totalItems, totalPages]);
+
+  const handleAuthError = useCallback((error: unknown) => {
+    if (error instanceof ApiAuthError) {
+      toast.error(t('auth.sessionExpired'), { duration: 1500, style: errorToastStyle });
+      return true;
+    }
+    return false;
+  }, [t]);
+
+  const fetchData = useCallback(async (overrideKeyword?: string) => {
+    setIsLoading(true);
+    try {
+      const res = await fetchBankAccounts({
+        page,
+        limit,
+        keyword: overrideKeyword ?? filters.keyword,
+      });
+      setItems(res.data ?? []);
+      setTotalItems(res.pagination?.total ?? res.data?.length ?? 0);
+      setTotalPages(res.pagination?.totalPages ?? 1);
+      if (res.pagination?.page) setPage(res.pagination.page);
+    } catch (error) {
+      if (handleAuthError(error)) return;
+      toast.error(error instanceof Error ? error.message : t('bankAccount.toast.loadError'), {
+        duration: 1500,
+        style: errorToastStyle,
+      });
+    } finally {
+      setIsLoading(false);
+      setIsRefreshing(false);
+    }
+  }, [filters.keyword, handleAuthError, limit, page, t]);
+
+  useEffect(() => {
+    void fetchData();
+  }, [fetchData]);
+
+  const getFieldError = (labelKey: string, value: string) => {
+    if (!value.trim()) return t(`${labelKey}.required`);
+    return undefined;
+  };
+
+  const validateForm = (form: { bankCode: string; accountNo: string; accountName: string }) => {
+    const errors = {
+      bankCode: getFieldError('bankAccount.validation.bankCode', form.bankCode),
+      accountNo: getFieldError('bankAccount.validation.accountNo', form.accountNo),
+      accountName: getFieldError('bankAccount.validation.accountName', form.accountName),
+    };
+    setFormErrors(errors);
+    return !Object.values(errors).some(Boolean);
+  };
+
+  const resetForms = () => {
+    setCreateForm({ bankCode: '', accountNo: '', accountName: '' });
+    setEditForm({ bankCode: '', accountNo: '', accountName: '' });
+    setFormErrors({});
+  };
+
+  const handleRefresh = () => {
+    setIsRefreshing(true);
+    void fetchData();
+  };
+
+  const handleSearch = () => {
+    const nextKeyword = filterInputs.keyword.trim();
+    setFilters({ keyword: nextKeyword });
+    setPage(1);
+    void fetchData(nextKeyword);
+  };
+
+  const handleFilterDialogChange = (open: boolean) => {
+    if (open) {
+      setFilterInputs(filters);
+    }
+    if (!open && !appliedRef.current) {
+      setFilterInputs(filters);
+    }
+    appliedRef.current = false;
+    setIsFilterDialogOpen(open);
+  };
+
+  const handleCreate = async () => {
+    if (!validateForm(createForm)) return;
+    setCreateDialogOpen(false);
+    setIsSaving(true);
+    try {
+      await createBankAccount({
+        bankCode: createForm.bankCode.trim(),
+        accountNo: createForm.accountNo.trim(),
+        accountName: createForm.accountName.trim(),
+      });
+      toast.success(t('bankAccount.toast.createSuccess'), {
+        duration: 1500,
+        icon: <CheckCircle2 className="h-5 w-5 text-emerald-500" />,
+      });
+      resetForms();
+      void fetchData();
+    } catch (error) {
+      if (handleAuthError(error)) return;
+      toast.error(error instanceof Error ? error.message : t('bankAccount.toast.createError'), {
+        duration: 1500,
+        style: errorToastStyle,
+      });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleOpenEdit = async (id: number) => {
+    setEditingId(id);
+    setEditDialogOpen(true);
+    setIsLoadingDetail(true);
+    try {
+      const response = await fetchBankAccountById(id);
+      setEditForm({
+        bankCode: response.data.bankCode ?? '',
+        accountNo: response.data.accountNo ?? '',
+        accountName: response.data.accountName ?? '',
+      });
+    } catch (error) {
+      if (handleAuthError(error)) return;
+      toast.error(error instanceof Error ? error.message : t('bankAccount.toast.detailError'), {
+        duration: 1500,
+        style: errorToastStyle,
+      });
+    } finally {
+      setIsLoadingDetail(false);
+    }
+  };
+
+  const handleUpdate = async () => {
+    if (!editingId) return;
+    if (!validateForm(editForm)) return;
+    setEditDialogOpen(false);
+    setIsSaving(true);
+    try {
+      await updateBankAccount(editingId, {
+        bankCode: editForm.bankCode.trim(),
+        accountNo: editForm.accountNo.trim(),
+        accountName: editForm.accountName.trim(),
+      });
+      toast.success(t('bankAccount.toast.updateSuccess'), {
+        duration: 1500,
+        icon: <CheckCircle2 className="h-5 w-5 text-emerald-500" />,
+      });
+      resetForms();
+      void fetchData();
+    } catch (error) {
+      if (handleAuthError(error)) return;
+      toast.error(error instanceof Error ? error.message : t('bankAccount.toast.updateError'), {
+        duration: 1500,
+        style: errorToastStyle,
+      });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleDialogChange = (open: boolean, type: 'create' | 'edit') => {
+    if (!open) {
+      resetForms();
+      if (type === 'edit') setEditingId(null);
+    }
+    if (type === 'create') setCreateDialogOpen(open);
+    if (type === 'edit') setEditDialogOpen(open);
+  };
+
+  return (
+    <div className="container space-y-6 pb-10 pt-4">
+      <div className="space-y-2">
+        <h1 className="text-3xl font-semibold leading-tight">{t('bankAccount.pageTitle')}</h1>
+        <p className="text-sm text-muted-foreground">{t('bankAccount.pageDescription')}</p>
+      </div>
+
+      <Card>
+        <CardHeader className="flex flex-col gap-4 pt-4 pb-4 md:flex-row md:items-center md:justify-between">
+          <div className="flex flex-col gap-2 max-md:self-start">
+            <CardTitle>{t('bankAccount.cardTitle')}</CardTitle>
+            <CardDescription>{t('bankAccount.cardDescription')}</CardDescription>
+          </div>
+          <div className="flex w-full flex-wrap items-center gap-2">
+            <Button
+              className="bg-primary text-white hover:bg-primary/90 active:bg-primary/80 flex items-center justify-center"
+              onClick={handleRefresh}
+              aria-label={t('common.refresh')}
+            >
+              <RefreshCcw className={cn('h-4 w-4 transition', isRefreshing && 'animate-spin')} aria-hidden />
+            </Button>
+
+            <Dialog open={isFilterDialogOpen} onOpenChange={handleFilterDialogChange}>
+              <DialogTrigger asChild>
+                <Button className="bg-primary text-white hover:bg-primary/90 active:bg-primary/80 flex items-center gap-2">
+                  <SlidersHorizontal className="h-4 w-4" aria-hidden />
+                  {t('common.filters')}
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-[520px]">
+                <DialogHeader>
+                  <DialogTitle>{t('common.filters')}</DialogTitle>
+                </DialogHeader>
+                <DialogBody className="space-y-4">
+                  <div className="flex flex-col gap-2">
+                    <span className="text-sm font-medium text-muted-foreground">{t('bankAccount.filters.keyword')}</span>
+                    <Input
+                      value={filterInputs.keyword}
+                      onChange={(event) => setFilterInputs({ keyword: event.target.value })}
+                      placeholder={t('bankAccount.filters.keywordPlaceholder')}
+                      className="md:w-[220px]"
+                    />
+                  </div>
+                </DialogBody>
+                <DialogFooter className="flex flex-col gap-2 sm:flex-row sm:justify-end">
+                  <Button
+                    variant="outline"
+                    className="w-full sm:w-auto"
+                    onClick={() => {
+                      appliedRef.current = false;
+                      setFilterInputs(filters);
+                      setIsFilterDialogOpen(false);
+                    }}
+                  >
+                    {t('common.cancel')}
+                  </Button>
+                  <Button
+                    className="w-full bg-primary text-white hover:bg-primary/90 active:bg-primary/80 sm:w-auto"
+                    onClick={() => {
+                      appliedRef.current = true;
+                      handleSearch();
+                      setIsFilterDialogOpen(false);
+                    }}
+                  >
+                    {t('common.search')}
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+
+            <Dialog open={createDialogOpen} onOpenChange={(open) => handleDialogChange(open, 'create')}>
+              <DialogTrigger asChild>
+                <Button className="w-auto bg-primary text-white hover:bg-primary/90 active:bg-primary/80 md:self-stretch">
+                  <Plus className="size-4" />
+                  {t('common.add')}
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>{t('bankAccount.create.title')}</DialogTitle>
+                  <DialogDescription>{t('bankAccount.create.description')}</DialogDescription>
+                </DialogHeader>
+                <DialogBody className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="bank-account-bank-code">{t('bankAccount.form.bankCode')}</Label>
+                    <Input
+                      id="bank-account-bank-code"
+                      value={createForm.bankCode}
+                      onChange={(event) => setCreateForm((prev) => ({ ...prev, bankCode: event.target.value }))}
+                      placeholder={t('bankAccount.form.bankCodePlaceholder')}
+                    />
+                    {formErrors.bankCode && <p className="text-sm text-destructive">{formErrors.bankCode}</p>}
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="bank-account-account-no">{t('bankAccount.form.accountNo')}</Label>
+                    <Input
+                      id="bank-account-account-no"
+                      value={createForm.accountNo}
+                      onChange={(event) => setCreateForm((prev) => ({ ...prev, accountNo: event.target.value }))}
+                      placeholder={t('bankAccount.form.accountNoPlaceholder')}
+                    />
+                    {formErrors.accountNo && <p className="text-sm text-destructive">{formErrors.accountNo}</p>}
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="bank-account-account-name">{t('bankAccount.form.accountName')}</Label>
+                    <Input
+                      id="bank-account-account-name"
+                      value={createForm.accountName}
+                      onChange={(event) => setCreateForm((prev) => ({ ...prev, accountName: event.target.value }))}
+                      placeholder={t('bankAccount.form.accountNamePlaceholder')}
+                    />
+                    {formErrors.accountName && <p className="text-sm text-destructive">{formErrors.accountName}</p>}
+                  </div>
+                </DialogBody>
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => handleDialogChange(false, 'create')}>
+                    {t('common.cancel')}
+                  </Button>
+                  <Button onClick={() => void handleCreate()} disabled={isSaving} className="bg-primary text-white hover:bg-primary/90">
+                    {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : t('common.save')}
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+
+            <Button
+              variant="outline"
+              onClick={() => {
+                setFilters({ keyword: '' });
+                setFilterInputs({ keyword: '' });
+                setPage(1);
+                void fetchData('');
+              }}
+              className="transition-colors hover:bg-transparent hover:text-foreground hover:border-input active:bg-muted/60"
+            >
+              {t('common.reset')}
+            </Button>
+          </div>
+        </CardHeader>
+        <Separator />
+        <CardContent className="space-y-4">
+          <div className="relative">
+            <div className="overflow-x-auto sm:rounded-md sm:border">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-[80px]">{t('bankAccount.table.id')}</TableHead>
+                    <TableHead className="min-w-[120px]">{t('bankAccount.table.bankCode')}</TableHead>
+                    <TableHead className="min-w-[160px]">{t('bankAccount.table.accountNo')}</TableHead>
+                    <TableHead className="min-w-[200px]">{t('bankAccount.table.accountName')}</TableHead>
+                    <TableHead className="min-w-[180px]">{t('bankAccount.table.createdAt')}</TableHead>
+                    <TableHead className="min-w-[180px]">{t('bankAccount.table.updatedAt')}</TableHead>
+                    <TableHead className="w-[120px] text-right">{t('bankAccount.table.action')}</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {isLoading
+                    ? Array.from({ length: 10 }).map((_, rowIndex) => (
+                        <TableRow key={`skeleton-${rowIndex}`}>
+                          {Array.from({ length: 7 }).map((_, colIndex) => (
+                            <TableCell key={colIndex}>
+                              <Skeleton className="h-4 w-full" />
+                            </TableCell>
+                          ))}
+                        </TableRow>
+                      ))
+                    : items.length === 0 && (
+                    <TableRow>
+                      <TableCell colSpan={7} className="py-10 text-center text-sm text-muted-foreground">
+                        <div className="flex flex-col items-center justify-center gap-3">
+                          <div className="flex h-14 w-14 items-center justify-center rounded-full bg-muted">
+                            <Inbox className="h-7 w-7" aria-hidden />
+                          </div>
+                          <div>
+                            <p className="font-medium text-foreground">{t('bankAccount.empty.title')}</p>
+                            <p>{t('bankAccount.empty.description')}</p>
+                          </div>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                      )}
+                  {!isLoading &&
+                    items.map((row) => (
+                      <TableRow key={row.id}>
+                        <TableCell>{row.id}</TableCell>
+                        <TableCell>{row.bankCode || '-'}</TableCell>
+                        <TableCell>{row.accountNo || '-'}</TableCell>
+                        <TableCell>{row.accountName || '-'}</TableCell>
+                        <TableCell>{row.created_at || '-'}</TableCell>
+                        <TableCell>{row.updated_at || '-'}</TableCell>
+                        <TableCell className="text-right">
+                          <Button size="sm" variant="outline" onClick={() => void handleOpenEdit(row.id)}>
+                            <Pencil className="mr-2 h-4 w-4" />
+                            {t('common.edit')}
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                </TableBody>
+              </Table>
+            </div>
+          </div>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <p className="text-sm text-muted-foreground">
+              {t('pagination.info')
+                .replace('{from}', String(totalItems ? (page - 1) * limit + 1 : 0))
+                .replace('{to}', String(Math.min(page * limit, totalItems)))
+                .replace('{count}', String(totalItems))}
+            </p>
+            <div className="flex items-center gap-2">
+              <Button variant="outline" size="sm" disabled={page <= 1 || isLoading} onClick={() => setPage((p) => Math.max(1, p - 1))}>
+                {t('common.prev')}
+              </Button>
+              <Select value={String(page)} onValueChange={(value) => setPage(Number(value))}>
+                <SelectTrigger className="w-[100px]" disabled={isLoading}>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {pageOptions.map((option) => (
+                    <SelectItem key={option} value={String(option)}>
+                      {option}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={page >= totalPages || isLoading}
+                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+              >
+                {t('common.next')}
+              </Button>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Dialog open={editDialogOpen} onOpenChange={(open) => handleDialogChange(open, 'edit')}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t('bankAccount.edit.title')}</DialogTitle>
+            <DialogDescription>{t('bankAccount.edit.description')}</DialogDescription>
+          </DialogHeader>
+          {isLoadingDetail ? (
+            <div className="py-6 text-center text-sm text-muted-foreground">{t('common.loading')}</div>
+          ) : (
+            <>
+              <DialogBody className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="bank-account-edit-bank-code">{t('bankAccount.form.bankCode')}</Label>
+                  <Input
+                    id="bank-account-edit-bank-code"
+                    value={editForm.bankCode}
+                    onChange={(event) => setEditForm((prev) => ({ ...prev, bankCode: event.target.value }))}
+                    placeholder={t('bankAccount.form.bankCodePlaceholder')}
+                  />
+                  {formErrors.bankCode && <p className="text-sm text-destructive">{formErrors.bankCode}</p>}
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="bank-account-edit-account-no">{t('bankAccount.form.accountNo')}</Label>
+                  <Input
+                    id="bank-account-edit-account-no"
+                    value={editForm.accountNo}
+                    onChange={(event) => setEditForm((prev) => ({ ...prev, accountNo: event.target.value }))}
+                    placeholder={t('bankAccount.form.accountNoPlaceholder')}
+                  />
+                  {formErrors.accountNo && <p className="text-sm text-destructive">{formErrors.accountNo}</p>}
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="bank-account-edit-account-name">{t('bankAccount.form.accountName')}</Label>
+                  <Input
+                    id="bank-account-edit-account-name"
+                    value={editForm.accountName}
+                    onChange={(event) => setEditForm((prev) => ({ ...prev, accountName: event.target.value }))}
+                    placeholder={t('bankAccount.form.accountNamePlaceholder')}
+                  />
+                  {formErrors.accountName && <p className="text-sm text-destructive">{formErrors.accountName}</p>}
+                </div>
+              </DialogBody>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => handleDialogChange(false, 'edit')}>
+                  {t('common.cancel')}
+                </Button>
+                <Button onClick={() => void handleUpdate()} disabled={isSaving} className="bg-primary text-white hover:bg-primary/90">
+                  {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : t('common.save')}
+                </Button>
+              </DialogFooter>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}

@@ -388,11 +388,9 @@ export function AdminBankAccountPage() {
                               onClick={() => void handleOpenEdit(row.id)}
                               className="bg-primary text-white hover:bg-primary/90"
                             >
-                              <Pencil className="mr-2 h-4 w-4" />
                               {t('common.edit')}
                             </Button>
                             <Button size="sm" variant="destructive" onClick={() => handleOpenDelete(row)}>
-                              <Trash2 className="mr-2 h-4 w-4" />
                               {t('common.delete')}
                             </Button>
                           </div>

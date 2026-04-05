@@ -540,8 +540,10 @@ export function AdminProfitPage({ tab = 'list' }: { tab?: ProfitTab }) {
         {tab === 'withdraw' && (
             <Card>
               <CardHeader className="pt-4 pb-4">
-                <CardTitle>{t('profit.withdraw.title')}</CardTitle>
-                <CardDescription>{t('profit.withdraw.description')}</CardDescription>
+                <div className="space-y-1">
+                  <CardTitle>{t('profit.withdraw.title')}</CardTitle>
+                  <CardDescription>{t('profit.withdraw.description')}</CardDescription>
+                </div>
               </CardHeader>
               <CardContent>
                 <div className="max-w-lg space-y-4">

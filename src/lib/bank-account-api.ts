@@ -69,3 +69,9 @@ export async function updateBankAccount(id: number, body: { bankCode: string; ac
     body,
   });
 }
+
+export async function deleteBankAccount(id: number) {
+  return apiFetch<ApiMessageResponse>(`data-rekening/delete/${id}`, {
+    method: 'POST',
+  });
+}

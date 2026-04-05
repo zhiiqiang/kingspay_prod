@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { CheckCircle2, Inbox, Loader2, Pencil, Plus, RefreshCcw, SlidersHorizontal } from 'lucide-react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { CheckCircle2, Inbox, Loader2, Pencil, Plus, RefreshCcw, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -22,6 +22,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { ApiAuthError } from '@/lib/api';
 import {
   createBankAccount,
+  deleteBankAccount,
   fetchBankAccountById,
   fetchBankAccounts,
   updateBankAccount,
@@ -48,14 +49,12 @@ export function AdminBankAccountPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-
-  const [filters, setFilters] = useState({ keyword: '' });
-  const [filterInputs, setFilterInputs] = useState({ keyword: '' });
-  const [isFilterDialogOpen, setIsFilterDialogOpen] = useState(false);
-  const appliedRef = useRef(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deletingItem, setDeletingItem] = useState<BankAccountItem | null>(null);
   const [isLoadingDetail, setIsLoadingDetail] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [createForm, setCreateForm] = useState({ bankCode: '', accountNo: '', accountName: '' });
@@ -75,13 +74,12 @@ export function AdminBankAccountPage() {
     return false;
   }, [t]);
 
-  const fetchData = useCallback(async (overrideKeyword?: string) => {
+  const fetchData = useCallback(async () => {
     setIsLoading(true);
     try {
       const res = await fetchBankAccounts({
         page,
         limit,
-        keyword: overrideKeyword ?? filters.keyword,
       });
       setItems(res.data ?? []);
       setTotalItems(res.pagination?.total ?? res.data?.length ?? 0);
@@ -97,7 +95,7 @@ export function AdminBankAccountPage() {
       setIsLoading(false);
       setIsRefreshing(false);
     }
-  }, [filters.keyword, handleAuthError, limit, page, t]);
+  }, [handleAuthError, limit, page, t]);
 
   useEffect(() => {
     void fetchData();
@@ -129,35 +127,17 @@ export function AdminBankAccountPage() {
     void fetchData();
   };
 
-  const handleSearch = () => {
-    const nextKeyword = filterInputs.keyword.trim();
-    setFilters({ keyword: nextKeyword });
-    setPage(1);
-    void fetchData(nextKeyword);
-  };
-
-  const handleFilterDialogChange = (open: boolean) => {
-    if (open) {
-      setFilterInputs(filters);
-    }
-    if (!open && !appliedRef.current) {
-      setFilterInputs(filters);
-    }
-    appliedRef.current = false;
-    setIsFilterDialogOpen(open);
-  };
-
   const handleCreate = async () => {
     if (!validateForm(createForm)) return;
     setCreateDialogOpen(false);
     setIsSaving(true);
     try {
-      await createBankAccount({
+      const response = await createBankAccount({
         bankCode: createForm.bankCode.trim(),
         accountNo: createForm.accountNo.trim(),
         accountName: createForm.accountName.trim(),
       });
-      toast.success(t('bankAccount.toast.createSuccess'), {
+      toast.success(response.message || t('bankAccount.toast.createSuccess'), {
         duration: 1500,
         icon: <CheckCircle2 className="h-5 w-5 text-emerald-500" />,
       });
@@ -202,12 +182,12 @@ export function AdminBankAccountPage() {
     setEditDialogOpen(false);
     setIsSaving(true);
     try {
-      await updateBankAccount(editingId, {
+      const response = await updateBankAccount(editingId, {
         bankCode: editForm.bankCode.trim(),
         accountNo: editForm.accountNo.trim(),
         accountName: editForm.accountName.trim(),
       });
-      toast.success(t('bankAccount.toast.updateSuccess'), {
+      toast.success(response.message || t('bankAccount.toast.updateSuccess'), {
         duration: 1500,
         icon: <CheckCircle2 className="h-5 w-5 text-emerald-500" />,
       });
@@ -233,6 +213,34 @@ export function AdminBankAccountPage() {
     if (type === 'edit') setEditDialogOpen(open);
   };
 
+  const handleOpenDelete = (item: BankAccountItem) => {
+    setDeletingItem(item);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleDelete = async () => {
+    if (!deletingItem) return;
+    setIsDeleting(true);
+    try {
+      const response = await deleteBankAccount(deletingItem.id);
+      toast.success(response.message || t('bankAccount.toast.deleteSuccess'), {
+        duration: 1500,
+        icon: <CheckCircle2 className="h-5 w-5 text-emerald-500" />,
+      });
+      setDeleteDialogOpen(false);
+      setDeletingItem(null);
+      void fetchData();
+    } catch (error) {
+      if (handleAuthError(error)) return;
+      toast.error(error instanceof Error ? error.message : t('bankAccount.toast.deleteError'), {
+        duration: 1500,
+        style: errorToastStyle,
+      });
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
   return (
     <div className="container space-y-6 pb-10 pt-4">
       <div className="space-y-2">
@@ -254,54 +262,6 @@ export function AdminBankAccountPage() {
             >
               <RefreshCcw className={cn('h-4 w-4 transition', isRefreshing && 'animate-spin')} aria-hidden />
             </Button>
-
-            <Dialog open={isFilterDialogOpen} onOpenChange={handleFilterDialogChange}>
-              <DialogTrigger asChild>
-                <Button className="bg-primary text-white hover:bg-primary/90 active:bg-primary/80 flex items-center gap-2">
-                  <SlidersHorizontal className="h-4 w-4" aria-hidden />
-                  {t('common.filters')}
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="sm:max-w-[520px]">
-                <DialogHeader>
-                  <DialogTitle>{t('common.filters')}</DialogTitle>
-                </DialogHeader>
-                <DialogBody className="space-y-4">
-                  <div className="flex flex-col gap-2">
-                    <span className="text-sm font-medium text-muted-foreground">{t('bankAccount.filters.keyword')}</span>
-                    <Input
-                      value={filterInputs.keyword}
-                      onChange={(event) => setFilterInputs({ keyword: event.target.value })}
-                      placeholder={t('bankAccount.filters.keywordPlaceholder')}
-                      className="md:w-[220px]"
-                    />
-                  </div>
-                </DialogBody>
-                <DialogFooter className="flex flex-col gap-2 sm:flex-row sm:justify-end">
-                  <Button
-                    variant="outline"
-                    className="w-full sm:w-auto"
-                    onClick={() => {
-                      appliedRef.current = false;
-                      setFilterInputs(filters);
-                      setIsFilterDialogOpen(false);
-                    }}
-                  >
-                    {t('common.cancel')}
-                  </Button>
-                  <Button
-                    className="w-full bg-primary text-white hover:bg-primary/90 active:bg-primary/80 sm:w-auto"
-                    onClick={() => {
-                      appliedRef.current = true;
-                      handleSearch();
-                      setIsFilterDialogOpen(false);
-                    }}
-                  >
-                    {t('common.search')}
-                  </Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
 
             <Dialog open={createDialogOpen} onOpenChange={(open) => handleDialogChange(open, 'create')}>
               <DialogTrigger asChild>
@@ -361,10 +321,8 @@ export function AdminBankAccountPage() {
             <Button
               variant="outline"
               onClick={() => {
-                setFilters({ keyword: '' });
-                setFilterInputs({ keyword: '' });
                 setPage(1);
-                void fetchData('');
+                void fetchData();
               }}
               className="transition-colors hover:bg-transparent hover:text-foreground hover:border-input active:bg-muted/60"
             >
@@ -424,10 +382,16 @@ export function AdminBankAccountPage() {
                         <TableCell>{row.created_at || '-'}</TableCell>
                         <TableCell>{row.updated_at || '-'}</TableCell>
                         <TableCell className="text-right">
-                          <Button size="sm" variant="outline" onClick={() => void handleOpenEdit(row.id)}>
-                            <Pencil className="mr-2 h-4 w-4" />
-                            {t('common.edit')}
-                          </Button>
+                          <div className="flex justify-end gap-2">
+                            <Button size="sm" variant="outline" onClick={() => void handleOpenEdit(row.id)}>
+                              <Pencil className="mr-2 h-4 w-4" />
+                              {t('common.edit')}
+                            </Button>
+                            <Button size="sm" variant="destructive" onClick={() => handleOpenDelete(row)}>
+                              <Trash2 className="mr-2 h-4 w-4" />
+                              {t('common.delete')}
+                            </Button>
+                          </div>
                         </TableCell>
                       </TableRow>
                     ))}
@@ -523,6 +487,23 @@ export function AdminBankAccountPage() {
               </DialogFooter>
             </>
           )}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t('bankAccount.delete.title')}</DialogTitle>
+            <DialogDescription>{t('bankAccount.delete.description')}</DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteDialogOpen(false)} disabled={isDeleting}>
+              {t('common.cancel')}
+            </Button>
+            <Button variant="destructive" onClick={() => void handleDelete()} disabled={isDeleting}>
+              {isDeleting ? <Loader2 className="h-4 w-4 animate-spin" /> : t('common.delete')}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

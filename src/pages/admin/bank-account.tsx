@@ -182,12 +182,12 @@ export function AdminBankAccountPage() {
     setEditDialogOpen(false);
     setIsSaving(true);
     try {
-      const response = await updateBankAccount(editingId, {
+      await updateBankAccount(editingId, {
         bankCode: editForm.bankCode.trim(),
         accountNo: editForm.accountNo.trim(),
         accountName: editForm.accountName.trim(),
       });
-      toast.success(response.message || t('bankAccount.toast.updateSuccess'), {
+      toast.success(t('bankAccount.toast.updateSuccess'), {
         duration: 1500,
         icon: <CheckCircle2 className="h-5 w-5 text-emerald-500" />,
       });
@@ -195,7 +195,7 @@ export function AdminBankAccountPage() {
       void fetchData();
     } catch (error) {
       if (handleAuthError(error)) return;
-      toast.error(error instanceof Error ? error.message : t('bankAccount.toast.updateError'), {
+      toast.error(t('bankAccount.toast.updateError'), {
         duration: 1500,
         style: errorToastStyle,
       });
@@ -222,8 +222,8 @@ export function AdminBankAccountPage() {
     if (!deletingItem) return;
     setIsDeleting(true);
     try {
-      const response = await deleteBankAccount(deletingItem.id);
-      toast.success(response.message || t('bankAccount.toast.deleteSuccess'), {
+      await deleteBankAccount(deletingItem.id);
+      toast.success(t('bankAccount.toast.deleteSuccess'), {
         duration: 1500,
         icon: <CheckCircle2 className="h-5 w-5 text-emerald-500" />,
       });
@@ -232,7 +232,7 @@ export function AdminBankAccountPage() {
       void fetchData();
     } catch (error) {
       if (handleAuthError(error)) return;
-      toast.error(error instanceof Error ? error.message : t('bankAccount.toast.deleteError'), {
+      toast.error(t('bankAccount.toast.deleteError'), {
         duration: 1500,
         style: errorToastStyle,
       });
@@ -383,7 +383,11 @@ export function AdminBankAccountPage() {
                         <TableCell>{row.updated_at || '-'}</TableCell>
                         <TableCell className="text-right">
                           <div className="flex justify-end gap-2">
-                            <Button size="sm" variant="outline" onClick={() => void handleOpenEdit(row.id)}>
+                            <Button
+                              size="sm"
+                              onClick={() => void handleOpenEdit(row.id)}
+                              className="bg-primary text-white hover:bg-primary/90"
+                            >
                               <Pencil className="mr-2 h-4 w-4" />
                               {t('common.edit')}
                             </Button>

@@ -19,6 +19,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { Switch } from '@/components/ui/switch';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import {
@@ -1558,105 +1559,79 @@ export function AdminEngineListPage() {
                 <Skeleton className="h-10 w-full" />
               </div>
             ) : (
-              <div className="space-y-6">
-                <div className="space-y-2">
-                  <h3 className="text-base font-semibold">{t('merchants.channelConfig.sections.channel')}</h3>
-                  <div className="overflow-x-auto rounded-md border">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>{t('merchants.channelConfig.table.channel')}</TableHead>
-                          <TableHead>{t('merchants.channelConfig.table.product')}</TableHead>
-                          <TableHead>{t('merchants.channelConfig.table.type')}</TableHead>
-                          <TableHead>{t('merchants.channelConfig.table.priority')}</TableHead>
-                          <TableHead className="text-right">{t('merchants.channelConfig.table.isActive')}</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {merchantChannels.map((channel, index) => (
-                          <TableRow key={`${channel.channelProdukId}-${index}`}>
-                            <TableCell>{channel.channelName}</TableCell>
-                            <TableCell>{channel.channelProdukName}</TableCell>
-                            <TableCell>{channel.channelProdukJenis}</TableCell>
-                            <TableCell className="w-[120px]">
-                              <Input
-                                type="number"
-                                min={0}
-                                value={channel.priority}
-                                onChange={(event) => {
-                                  const value = Number(event.target.value || 0);
-                                  setMerchantChannels((previous) =>
-                                    previous.map((item, itemIndex) => (itemIndex === index ? { ...item, priority: value } : item)),
-                                  );
-                                }}
-                              />
-                            </TableCell>
-                            <TableCell className="text-right">
-                              <Switch
-                                checked={Boolean(channel.status)}
-                                onCheckedChange={(checked) => {
-                                  setMerchantChannels((previous) =>
-                                    previous.map((item, itemIndex) =>
-                                      itemIndex === index ? { ...item, status: checked ? 1 : 0 } : item,
-                                    ),
-                                  );
-                                }}
-                              />
-                            </TableCell>
+              <ScrollArea className="h-[60vh] pr-2" viewportClassName="pr-1">
+                <div className="space-y-6">
+                  <div className="space-y-2">
+                    <h3 className="text-base font-semibold">{t('merchants.channelConfig.sections.channel')}</h3>
+                    <div className="overflow-x-auto rounded-md border">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>{t('merchants.channelConfig.table.channel')}</TableHead>
+                            <TableHead>{t('merchants.channelConfig.table.product')}</TableHead>
+                            <TableHead>{t('merchants.channelConfig.table.type')}</TableHead>
+                            <TableHead className="text-right">{t('merchants.channelConfig.table.isActive')}</TableHead>
                           </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
+                        </TableHeader>
+                        <TableBody>
+                          {merchantChannels.map((channel, index) => (
+                            <TableRow key={`${channel.channelProdukId}-${index}`}>
+                              <TableCell>{channel.channelName}</TableCell>
+                              <TableCell>{channel.channelProdukName}</TableCell>
+                              <TableCell>{channel.channelProdukJenis}</TableCell>
+                              <TableCell className="text-right">
+                                <Switch
+                                  checked={Boolean(channel.status)}
+                                  onCheckedChange={(checked) => {
+                                    setMerchantChannels((previous) =>
+                                      previous.map((item, itemIndex) =>
+                                        itemIndex === index ? { ...item, status: checked ? 1 : 0 } : item,
+                                      ),
+                                    );
+                                  }}
+                                />
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
                   </div>
-                </div>
 
-                <div className="space-y-2">
-                  <h3 className="text-base font-semibold">{t('merchants.channelConfig.sections.disbursement')}</h3>
-                  <div className="overflow-x-auto rounded-md border">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>{t('merchants.channelConfig.table.channel')}</TableHead>
-                          <TableHead>{t('merchants.channelConfig.table.priority')}</TableHead>
-                          <TableHead className="text-right">{t('merchants.channelConfig.table.isActive')}</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {merchantChannelDisbursements.map((channel, index) => (
-                          <TableRow key={`${channel.channelDisbursementId}-${index}`}>
-                            <TableCell>{channel.channelName}</TableCell>
-                            <TableCell className="w-[120px]">
-                              <Input
-                                type="number"
-                                min={0}
-                                value={channel.priority}
-                                onChange={(event) => {
-                                  const value = Number(event.target.value || 0);
-                                  setMerchantChannelDisbursements((previous) =>
-                                    previous.map((item, itemIndex) => (itemIndex === index ? { ...item, priority: value } : item)),
-                                  );
-                                }}
-                              />
-                            </TableCell>
-                            <TableCell className="text-right">
-                              <Switch
-                                checked={Boolean(channel.isActive)}
-                                onCheckedChange={(checked) => {
-                                  setMerchantChannelDisbursements((previous) =>
-                                    previous.map((item, itemIndex) =>
-                                      itemIndex === index ? { ...item, isActive: checked ? 1 : 0 } : item,
-                                    ),
-                                  );
-                                }}
-                              />
-                            </TableCell>
+                  <div className="space-y-2">
+                    <h3 className="text-base font-semibold">{t('merchants.channelConfig.sections.disbursement')}</h3>
+                    <div className="overflow-x-auto rounded-md border">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>{t('merchants.channelConfig.table.channel')}</TableHead>
+                            <TableHead className="text-right">{t('merchants.channelConfig.table.isActive')}</TableHead>
                           </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
+                        </TableHeader>
+                        <TableBody>
+                          {merchantChannelDisbursements.map((channel, index) => (
+                            <TableRow key={`${channel.channelDisbursementId}-${index}`}>
+                              <TableCell>{channel.channelName}</TableCell>
+                              <TableCell className="text-right">
+                                <Switch
+                                  checked={Boolean(channel.isActive)}
+                                  onCheckedChange={(checked) => {
+                                    setMerchantChannelDisbursements((previous) =>
+                                      previous.map((item, itemIndex) =>
+                                        itemIndex === index ? { ...item, isActive: checked ? 1 : 0 } : item,
+                                      ),
+                                    );
+                                  }}
+                                />
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
                   </div>
                 </div>
-              </div>
+              </ScrollArea>
             )}
           </DialogBody>
           <DialogFooter className="flex flex-col gap-2 sm:flex-row sm:justify-end">

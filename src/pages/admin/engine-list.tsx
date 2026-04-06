@@ -1541,7 +1541,7 @@ export function AdminEngineListPage() {
         </DialogContent>
       </Dialog>
       <Dialog open={channelDialogOpen} onOpenChange={handleChannelDialogChange}>
-        <DialogContent className="sm:max-w-4xl">
+        <DialogContent>
           <DialogHeader>
             <DialogTitle>{t('merchants.channelConfig.title')}</DialogTitle>
             <DialogDescription>{t('merchants.channelConfig.description')}</DialogDescription>

@@ -1,5 +1,6 @@
 import { ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { CheckCircle2, Eye, EyeOff, Filter, Plus, RefreshCcw, SlidersHorizontal } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -988,6 +989,13 @@ export function AdminEngineListPage() {
         cellClassName: 'whitespace-nowrap text-right w-fit',
         render: (merchant) => (
           <div className="flex flex-nowrap items-center justify-end gap-2">
+            <Button
+              asChild
+              size="sm"
+              className="bg-primary text-white hover:bg-primary/90"
+            >
+              <Link to="/admin/channel-store">{t('merchants.actions.channel')}</Link>
+            </Button>
             {canTopup && (
               <Button
                 size="sm"

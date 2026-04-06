@@ -13,6 +13,7 @@ import { AdminChannelStorePage } from '@/pages/admin/channel-store';
 import { AdminChannelDisbursementPage } from '@/pages/admin/channel-disbursement';
 import { AdminBankListPage } from '@/pages/admin/bank-list';
 import { AdminProfitPage } from '@/pages/admin/profit';
+import { AdminBankAccountPage } from '@/pages/admin/bank-account';
 import { ReconciliationListPage } from '@/pages/reconciliation/reconciliation-list';
 import { MerchantSummaryReportPage } from '@/pages/reports/merchant-summary';
 import { LoginPage } from '@/pages/auth/login';
@@ -24,14 +25,16 @@ import { NotFoundPage } from '@/pages/shared/not-found';
 
 type RequirePermissionProps = {
   permission?: string;
+  anyPermissions?: string[];
   children: ReactNode;
 };
 
-const RequirePermission = ({ permission, children }: RequirePermissionProps) => {
-  if (!permission) return <>{children}</>;
+const RequirePermission = ({ permission, anyPermissions, children }: RequirePermissionProps) => {
+  if (!permission && !anyPermissions?.length) return <>{children}</>;
 
   const permissions = getStoredUserPermissions();
   if (permissions.includes(permission)) return <>{children}</>;
+  if (anyPermissions?.some((value) => permissions.includes(value))) return <>{children}</>;
 
   return <AccessDeniedPage />;
 };
@@ -130,6 +133,14 @@ export function AppRoutingSetup() {
         <Route path="/admin/profit/list" element={<AdminProfitPage tab="list" />} />
         <Route path="/admin/profit/withdraw" element={<AdminProfitPage tab="withdraw" />} />
         <Route path="/admin/profit/history" element={<AdminProfitPage tab="history" />} />
+        <Route
+          path="/admin/profit/bank-account"
+          element={(
+            <RequirePermission anyPermissions={['dataRekening:list', 'dataRekening:add', 'dataRekening:update', 'dataRekening:delete']}>
+              <AdminBankAccountPage />
+            </RequirePermission>
+          )}
+        />
         <Route path="/admin/*" element={<NotFoundPage />} />
         <Route
           path="/reconciliation/list"

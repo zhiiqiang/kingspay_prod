@@ -6,6 +6,7 @@ export interface MenuSectionItem {
   titleKey?: string;
   path?: string;
   permission?: string;
+  permissionAny?: string[];
   children?: MenuSectionItem[];
 }
 
@@ -156,6 +157,7 @@ export const menuSections: MenuSection[] = [
         title: 'Bank Account',
         titleKey: 'menu.profitBankAccount',
         path: '/admin/profit/bank-account',
+        permissionAny: ['dataRekening:list', 'dataRekening:add', 'dataRekening:update', 'dataRekening:delete'],
       },
     ],
   },
@@ -199,6 +201,9 @@ export const getMenuSectionsForPermissions = (permissions: string[]) => {
   const filterMenuItems = (items: MenuSectionItem[]): MenuSectionItem[] =>
     items.reduce<MenuSectionItem[]>((filtered, item) => {
       if (item.permission && !permissionSet.has(item.permission)) {
+        return filtered;
+      }
+      if (item.permissionAny && !item.permissionAny.some((permission) => permissionSet.has(permission))) {
         return filtered;
       }
 

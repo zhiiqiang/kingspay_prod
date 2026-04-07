@@ -19,6 +19,8 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Switch } from '@/components/ui/switch';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import {
   DropdownMenu,
@@ -83,6 +85,29 @@ interface AgentListResponse {
   message?: string;
   data?: AgentItem[];
   pagination?: MerchantPagination;
+}
+
+interface MerchantChannelConfigItem {
+  channelId: number;
+  channelName: string;
+  channelProdukName: string;
+  channelProdukJenis: string;
+  channelProdukId: number;
+  status: number;
+  priority: number;
+}
+
+interface MerchantChannelDisbursementConfigItem {
+  channelDisbursementId: number;
+  channelName: string;
+  isActive: number;
+  priority: number;
+}
+
+interface MerchantConfigListResponse<T> {
+  status: boolean;
+  message?: string;
+  data?: T[];
 }
 
 const STATUS_OPTIONS: { label: string; value: MerchantStatus | string }[] = [
@@ -205,6 +230,13 @@ export function AdminEngineListPage() {
   const tableScrollRef = useRef<HTMLDivElement | null>(null);
   const [isSavingBalance, setIsSavingBalance] = useState(false);
   const [showBalancePassword, setShowBalancePassword] = useState(false);
+  const [channelDialogOpen, setChannelDialogOpen] = useState(false);
+  const [channelMerchantId, setChannelMerchantId] = useState<number | string | null>(null);
+  const [channelMerchantName, setChannelMerchantName] = useState('');
+  const [merchantChannels, setMerchantChannels] = useState<MerchantChannelConfigItem[]>([]);
+  const [merchantChannelDisbursements, setMerchantChannelDisbursements] = useState<MerchantChannelDisbursementConfigItem[]>([]);
+  const [isLoadingChannelConfig, setIsLoadingChannelConfig] = useState(false);
+  const [isSavingChannelConfig, setIsSavingChannelConfig] = useState(false);
   const permissions = useMemo(() => new Set(getStoredUserPermissions()), []);
   const canTopup = permissions.has('merchant:topup');
   const canDeduct = permissions.has('merchant:deduct');
@@ -605,6 +637,76 @@ export function AdminEngineListPage() {
     setShowBalancePassword(false);
   }, []);
 
+  const handleChannelDialogChange = (open: boolean) => {
+    if (!open) {
+      setChannelMerchantId(null);
+      setChannelMerchantName('');
+      setMerchantChannels([]);
+      setMerchantChannelDisbursements([]);
+    }
+    setChannelDialogOpen(open);
+  };
+
+  const handleOpenChannelDialog = useCallback(async (merchant: MerchantItem) => {
+    if (!merchant?.id) return;
+    setChannelDialogOpen(true);
+    setChannelMerchantId(merchant.id);
+    setChannelMerchantName(merchant.name ?? '-');
+    setIsLoadingChannelConfig(true);
+
+    try {
+      const [channelResponse, channelDisbursementResponse] = await Promise.all([
+        apiFetch<MerchantConfigListResponse<MerchantChannelConfigItem>>(`merchant/${merchant.id}/channels`, { method: 'GET' }),
+        apiFetch<MerchantConfigListResponse<MerchantChannelDisbursementConfigItem>>(`merchant/${merchant.id}/channel-disbursement`, { method: 'GET' }),
+      ]);
+      setMerchantChannels(channelResponse.data ?? []);
+      setMerchantChannelDisbursements(channelDisbursementResponse.data ?? []);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : t('merchants.channelConfig.toast.loadError'));
+      setChannelDialogOpen(false);
+    } finally {
+      setIsLoadingChannelConfig(false);
+    }
+  }, [t]);
+
+  const handleSaveChannelConfig = async () => {
+    if (!channelMerchantId) return;
+    setIsSavingChannelConfig(true);
+    try {
+      await Promise.all([
+        apiFetch(`merchant/${channelMerchantId}/channels`, {
+          method: 'POST',
+          body: {
+            channels: merchantChannels.map((channel) => ({
+              channelProdukId: channel.channelProdukId,
+              isActive: Boolean(channel.status),
+              priority: Number(channel.priority) || 0,
+            })),
+          },
+        }),
+        apiFetch(`merchant/${channelMerchantId}/channel-disbursement`, {
+          method: 'POST',
+          body: {
+            channels: merchantChannelDisbursements.map((channel) => ({
+              channelDisbursementId: channel.channelDisbursementId,
+              isActive: Boolean(channel.isActive),
+              priority: Number(channel.priority) || 0,
+            })),
+          },
+        }),
+      ]);
+      toast.success(t('merchants.channelConfig.toast.saveSuccess'), {
+        duration: 1500,
+        icon: <CheckCircle2 className="h-5 w-5 text-emerald-500" />,
+      });
+      handleChannelDialogChange(false);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : t('merchants.channelConfig.toast.saveError'));
+    } finally {
+      setIsSavingChannelConfig(false);
+    }
+  };
+
   const handleOpenEditDialog = useCallback(
     (merchant: MerchantItem) => {
       setMerchantDialogOpen(true);
@@ -988,6 +1090,13 @@ export function AdminEngineListPage() {
         cellClassName: 'whitespace-nowrap text-right w-fit',
         render: (merchant) => (
           <div className="flex flex-nowrap items-center justify-end gap-2">
+            <Button
+              size="sm"
+              className="bg-primary text-white hover:bg-primary/90"
+              onClick={() => void handleOpenChannelDialog(merchant)}
+            >
+              {t('merchants.actions.channel')}
+            </Button>
             {canTopup && (
               <Button
                 size="sm"
@@ -1431,6 +1540,115 @@ export function AdminEngineListPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      <Dialog open={channelDialogOpen} onOpenChange={handleChannelDialogChange}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t('merchants.channelConfig.title')}</DialogTitle>
+            <DialogDescription>{t('merchants.channelConfig.description')}</DialogDescription>
+          </DialogHeader>
+          <DialogBody className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              <span>{t('merchants.channelConfig.merchantName')} </span>
+              <span className="font-medium text-foreground">{channelMerchantName || '-'}</span>
+            </p>
+
+            {isLoadingChannelConfig ? (
+              <div className="space-y-2">
+                <Skeleton className="h-10 w-full" />
+                <Skeleton className="h-10 w-full" />
+                <Skeleton className="h-10 w-full" />
+              </div>
+            ) : (
+              <ScrollArea className="h-[60vh] pr-2" viewportClassName="pr-1">
+                <div className="space-y-6">
+                  <div className="space-y-2">
+                    <h3 className="text-base font-semibold">{t('merchants.channelConfig.sections.channel')}</h3>
+                    <div className="overflow-x-auto rounded-md border">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>{t('merchants.channelConfig.table.channel')}</TableHead>
+                            <TableHead>{t('merchants.channelConfig.table.product')}</TableHead>
+                            <TableHead>{t('merchants.channelConfig.table.type')}</TableHead>
+                            <TableHead className="text-right">{t('merchants.channelConfig.table.isActive')}</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {merchantChannels.map((channel, index) => (
+                            <TableRow key={`${channel.channelProdukId}-${index}`}>
+                              <TableCell>{channel.channelName}</TableCell>
+                              <TableCell>{channel.channelProdukName}</TableCell>
+                              <TableCell>{channel.channelProdukJenis}</TableCell>
+                              <TableCell className="text-right">
+                                <Switch
+                                  checked={Boolean(channel.status)}
+                                  onCheckedChange={(checked) => {
+                                    setMerchantChannels((previous) =>
+                                      previous.map((item, itemIndex) =>
+                                        itemIndex === index ? { ...item, status: checked ? 1 : 0 } : item,
+                                      ),
+                                    );
+                                  }}
+                                />
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <h3 className="text-base font-semibold">{t('merchants.channelConfig.sections.disbursement')}</h3>
+                    <div className="overflow-x-auto rounded-md border">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>{t('merchants.channelConfig.table.channel')}</TableHead>
+                            <TableHead className="text-right">{t('merchants.channelConfig.table.isActive')}</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {merchantChannelDisbursements.map((channel, index) => (
+                            <TableRow key={`${channel.channelDisbursementId}-${index}`}>
+                              <TableCell>{channel.channelName}</TableCell>
+                              <TableCell className="text-right">
+                                <Switch
+                                  checked={Boolean(channel.isActive)}
+                                  onCheckedChange={(checked) => {
+                                    setMerchantChannelDisbursements((previous) =>
+                                      previous.map((item, itemIndex) =>
+                                        itemIndex === index ? { ...item, isActive: checked ? 1 : 0 } : item,
+                                      ),
+                                    );
+                                  }}
+                                />
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  </div>
+                </div>
+              </ScrollArea>
+            )}
+          </DialogBody>
+          <DialogFooter className="flex flex-col gap-2 sm:flex-row sm:justify-end">
+            <Button variant="outline" className="w-full sm:w-auto" onClick={() => handleChannelDialogChange(false)}>
+              {t('common.cancel')}
+            </Button>
+            <Button
+              className="w-full bg-primary text-white hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
+              onClick={() => void handleSaveChannelConfig()}
+              disabled={isLoadingChannelConfig || isSavingChannelConfig}
+            >
+              {isSavingChannelConfig ? t('common.saving') : t('common.save')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <Dialog open={balanceDialogOpen} onOpenChange={handleBalanceDialogChange}>
         <DialogContent className="sm:max-w-[420px]">
           <DialogHeader>

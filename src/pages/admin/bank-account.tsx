@@ -20,6 +20,7 @@ import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { ApiAuthError } from '@/lib/api';
+import { getStoredUserPermissions } from '@/lib/auth';
 import {
   createBankAccount,
   deleteBankAccount,
@@ -41,6 +42,11 @@ const errorToastStyle = {
 
 export function AdminBankAccountPage() {
   const { t } = useLanguage();
+  const permissionSet = useMemo(() => new Set(getStoredUserPermissions()), []);
+  const canList = permissionSet.has('dataRekening:list');
+  const canAdd = permissionSet.has('dataRekening:add');
+  const canUpdate = permissionSet.has('dataRekening:update');
+  const canDelete = permissionSet.has('dataRekening:delete');
   const [items, setItems] = useState<BankAccountItem[]>([]);
   const [page, setPage] = useState(1);
   const [limit] = useState(10);
@@ -75,6 +81,14 @@ export function AdminBankAccountPage() {
   }, [t]);
 
   const fetchData = useCallback(async () => {
+    if (!canList) {
+      setItems([]);
+      setTotalItems(0);
+      setTotalPages(1);
+      setIsLoading(false);
+      setIsRefreshing(false);
+      return;
+    }
     setIsLoading(true);
     try {
       const res = await fetchBankAccounts({
@@ -95,7 +109,7 @@ export function AdminBankAccountPage() {
       setIsLoading(false);
       setIsRefreshing(false);
     }
-  }, [handleAuthError, limit, page, t]);
+  }, [canList, handleAuthError, limit, page, t]);
 
   useEffect(() => {
     void fetchData();
@@ -129,6 +143,7 @@ export function AdminBankAccountPage() {
 
   const handleCreate = async () => {
     if (!validateForm(createForm)) return;
+    if (!canAdd) return;
     setCreateDialogOpen(false);
     setIsSaving(true);
     try {
@@ -179,6 +194,7 @@ export function AdminBankAccountPage() {
   const handleUpdate = async () => {
     if (!editingId) return;
     if (!validateForm(editForm)) return;
+    if (!canUpdate) return;
     setEditDialogOpen(false);
     setIsSaving(true);
     try {
@@ -220,6 +236,7 @@ export function AdminBankAccountPage() {
 
   const handleDelete = async () => {
     if (!deletingItem) return;
+    if (!canDelete) return;
     setIsDeleting(true);
     try {
       await deleteBankAccount(deletingItem.id);
@@ -263,14 +280,15 @@ export function AdminBankAccountPage() {
               <RefreshCcw className={cn('h-4 w-4 transition', isRefreshing && 'animate-spin')} aria-hidden />
             </Button>
 
-            <Dialog open={createDialogOpen} onOpenChange={(open) => handleDialogChange(open, 'create')}>
-              <DialogTrigger asChild>
-                <Button className="w-auto bg-primary text-white hover:bg-primary/90 active:bg-primary/80 md:self-stretch">
-                  <Plus className="size-4" />
-                  {t('common.add')}
-                </Button>
-              </DialogTrigger>
-              <DialogContent>
+            {canAdd && (
+              <Dialog open={createDialogOpen} onOpenChange={(open) => handleDialogChange(open, 'create')}>
+                <DialogTrigger asChild>
+                  <Button className="w-auto bg-primary text-white hover:bg-primary/90 active:bg-primary/80 md:self-stretch">
+                    <Plus className="size-4" />
+                    {t('common.add')}
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
                 <DialogHeader>
                   <DialogTitle>{t('bankAccount.create.title')}</DialogTitle>
                   <DialogDescription>{t('bankAccount.create.description')}</DialogDescription>
@@ -315,8 +333,9 @@ export function AdminBankAccountPage() {
                     {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : t('common.save')}
                   </Button>
                 </DialogFooter>
-              </DialogContent>
-            </Dialog>
+                </DialogContent>
+              </Dialog>
+            )}
 
             <Button
               variant="outline"
@@ -383,16 +402,22 @@ export function AdminBankAccountPage() {
                         <TableCell>{row.updated_at || '-'}</TableCell>
                         <TableCell className="text-right">
                           <div className="flex justify-end gap-2">
-                            <Button
-                              size="sm"
-                              onClick={() => void handleOpenEdit(row.id)}
-                              className="bg-primary text-white hover:bg-primary/90"
-                            >
-                              {t('common.edit')}
-                            </Button>
-                            <Button size="sm" variant="destructive" onClick={() => handleOpenDelete(row)}>
-                              {t('common.delete')}
-                            </Button>
+                            {canUpdate && (
+                              <Button
+                                size="sm"
+                                onClick={() => void handleOpenEdit(row.id)}
+                                className="bg-primary text-white hover:bg-primary/90"
+                              >
+                                <Pencil className="mr-2 h-4 w-4" />
+                                {t('common.edit')}
+                              </Button>
+                            )}
+                            {canDelete && (
+                              <Button size="sm" variant="destructive" onClick={() => handleOpenDelete(row)}>
+                                <Trash2 className="mr-2 h-4 w-4" />
+                                {t('common.delete')}
+                              </Button>
+                            )}
                           </div>
                         </TableCell>
                       </TableRow>
@@ -437,8 +462,9 @@ export function AdminBankAccountPage() {
         </CardContent>
       </Card>
 
-      <Dialog open={editDialogOpen} onOpenChange={(open) => handleDialogChange(open, 'edit')}>
-        <DialogContent>
+      {canUpdate && (
+        <Dialog open={editDialogOpen} onOpenChange={(open) => handleDialogChange(open, 'edit')}>
+          <DialogContent>
           <DialogHeader>
             <DialogTitle>{t('bankAccount.edit.title')}</DialogTitle>
             <DialogDescription>{t('bankAccount.edit.description')}</DialogDescription>
@@ -489,11 +515,13 @@ export function AdminBankAccountPage() {
               </DialogFooter>
             </>
           )}
-        </DialogContent>
-      </Dialog>
+          </DialogContent>
+        </Dialog>
+      )}
 
-      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <DialogContent>
+      {canDelete && (
+        <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+          <DialogContent>
           <DialogHeader>
             <DialogTitle>{t('bankAccount.delete.title')}</DialogTitle>
             <DialogDescription>{t('bankAccount.delete.description')}</DialogDescription>
@@ -506,8 +534,9 @@ export function AdminBankAccountPage() {
               {isDeleting ? <Loader2 className="h-4 w-4 animate-spin" /> : t('common.delete')}
             </Button>
           </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 }

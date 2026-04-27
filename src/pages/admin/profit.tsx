@@ -29,6 +29,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Skeleton } from '@/components/ui/skeleton';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { ApiAuthError } from '@/lib/api';
+import { getStoredUserPermissions } from '@/lib/auth';
 import { fetchBankAccounts, type BankAccountItem } from '@/lib/bank-account-api';
 import {
   fetchProfitData,

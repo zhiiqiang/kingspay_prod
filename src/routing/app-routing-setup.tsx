@@ -130,9 +130,30 @@ export function AppRoutingSetup() {
           }
         />
         <Route path="/admin/profit" element={<Navigate to="/admin/profit/list" replace />} />
-        <Route path="/admin/profit/list" element={<AdminProfitPage tab="list" />} />
-        <Route path="/admin/profit/withdraw" element={<AdminProfitPage tab="withdraw" />} />
-        <Route path="/admin/profit/history" element={<AdminProfitPage tab="history" />} />
+        <Route
+          path="/admin/profit/list"
+          element={(
+            <RequirePermission permission="profit:data">
+              <AdminProfitPage tab="list" />
+            </RequirePermission>
+          )}
+        />
+        <Route
+          path="/admin/profit/withdraw"
+          element={(
+            <RequirePermission anyPermissions={['profit:withdraw:inquiry', 'profit:withdraw:transfer']}>
+              <AdminProfitPage tab="withdraw" />
+            </RequirePermission>
+          )}
+        />
+        <Route
+          path="/admin/profit/history"
+          element={(
+            <RequirePermission permission="profit:withdraw:history">
+              <AdminProfitPage tab="history" />
+            </RequirePermission>
+          )}
+        />
         <Route
           path="/admin/profit/bank-account"
           element={(

@@ -142,16 +142,19 @@ export const menuSections: MenuSection[] = [
         title: 'Profit List',
         titleKey: 'menu.profitList',
         path: '/admin/profit/list',
+        permission: 'profit:data',
       },
       {
         title: 'Withdraw',
         titleKey: 'menu.profitWithdraw',
         path: '/admin/profit/withdraw',
+        permissionAny: ['profit:withdraw:inquiry', 'profit:withdraw:transfer'],
       },
       {
         title: 'Withdraw History',
         titleKey: 'menu.profitWithdrawHistory',
         path: '/admin/profit/history',
+        permission: 'profit:withdraw:history',
       },
       {
         title: 'Bank Account',

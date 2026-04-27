@@ -29,6 +29,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Skeleton } from '@/components/ui/skeleton';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { ApiAuthError } from '@/lib/api';
+import { getStoredUserPermissions } from '@/lib/auth';
 import { fetchBankAccounts, type BankAccountItem } from '@/lib/bank-account-api';
 import {
   fetchProfitData,
@@ -131,6 +132,9 @@ export type ProfitTab = 'list' | 'withdraw' | 'history';
 export function AdminProfitPage({ tab = 'list' }: { tab?: ProfitTab }) {
   const { t } = useLanguage();
   const navigate = useNavigate();
+  const permissionSet = useMemo(() => new Set(getStoredUserPermissions()), []);
+  const canInquiryWithdraw = permissionSet.has('profit:withdraw:inquiry');
+  const canTransferWithdraw = permissionSet.has('profit:withdraw:transfer');
 
   // Profit List
   const [profitData, setProfitData] = useState<ProfitEntry[]>([]);
@@ -246,6 +250,7 @@ export function AdminProfitPage({ tab = 'list' }: { tab?: ProfitTab }) {
   }, [tab, loadBankAccounts]);
 
   const handleInquiry = useCallback(async () => {
+    if (!canInquiryWithdraw) return;
     const selectedAccount = bankAccounts.find((item) => String(item.id) === withdrawBankAccountId);
     const amount = Number(withdrawAmount);
     if (!selectedAccount) {
@@ -274,9 +279,10 @@ export function AdminProfitPage({ tab = 'list' }: { tab?: ProfitTab }) {
     } finally {
       setIsInquiring(false);
     }
-  }, [bankAccounts, withdrawBankAccountId, withdrawAmount, handleAuthError, t]);
+  }, [bankAccounts, canInquiryWithdraw, withdrawBankAccountId, withdrawAmount, handleAuthError, t]);
 
   const handleTransfer = useCallback(async () => {
+    if (!canTransferWithdraw) return;
     if (!inquiryData) return;
     const code = withdrawGoogleAuthCode.trim();
     if (!code) {
@@ -308,7 +314,7 @@ export function AdminProfitPage({ tab = 'list' }: { tab?: ProfitTab }) {
     } finally {
       setIsTransferring(false);
     }
-  }, [inquiryData, withdrawGoogleAuthCode, handleAuthError, t, loadHistory, navigate]);
+  }, [canTransferWithdraw, inquiryData, withdrawGoogleAuthCode, handleAuthError, t, loadHistory, navigate]);
 
   const resetInquiry = useCallback(() => {
     setInquiryData(null);
@@ -596,7 +602,7 @@ export function AdminProfitPage({ tab = 'list' }: { tab?: ProfitTab }) {
                   <Button
                     className="bg-primary text-white hover:bg-primary/90 active:bg-primary/80"
                     onClick={() => void handleInquiry()}
-                    disabled={isInquiring}
+                    disabled={isInquiring || !canInquiryWithdraw}
                   >
                     {isInquiring ? (
                       <>
@@ -633,7 +639,7 @@ export function AdminProfitPage({ tab = 'list' }: { tab?: ProfitTab }) {
                       <Button
                         className="w-full bg-primary text-white hover:bg-primary/90 active:bg-primary/80 sm:w-auto"
                         onClick={() => void handleTransfer()}
-                        disabled={isTransferring}
+                        disabled={isTransferring || !canTransferWithdraw}
                       >
                         {isTransferring ? (
                           <>

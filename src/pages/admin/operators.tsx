@@ -311,6 +311,31 @@ const PERMISSION_GROUPS: PermissionGroup[] = [
     ],
   },
   {
+    nameKey: 'operators.permissions.group.profit',
+    permissions: [
+      {
+        key: 'profit:data',
+        labelKey: 'operators.permissions.profit.data',
+        descriptionKey: 'operators.permissions.profit.dataDescription',
+      },
+      {
+        key: 'profit:withdraw:inquiry',
+        labelKey: 'operators.permissions.profit.withdrawInquiry',
+        descriptionKey: 'operators.permissions.profit.withdrawInquiryDescription',
+      },
+      {
+        key: 'profit:withdraw:transfer',
+        labelKey: 'operators.permissions.profit.withdrawTransfer',
+        descriptionKey: 'operators.permissions.profit.withdrawTransferDescription',
+      },
+      {
+        key: 'profit:withdraw:history',
+        labelKey: 'operators.permissions.profit.withdrawHistory',
+        descriptionKey: 'operators.permissions.profit.withdrawHistoryDescription',
+      },
+    ],
+  },
+  {
     nameKey: 'operators.permissions.group.reports',
     permissions: [
       {

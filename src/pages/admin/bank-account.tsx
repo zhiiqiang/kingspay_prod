@@ -29,6 +29,7 @@ import {
   updateBankAccount,
   type BankAccountItem,
 } from '@/lib/bank-account-api';
+import { fetchBankList, type BankListItem } from '@/lib/bank-list-api';
 import { cn } from '@/lib/utils';
 import { useLanguage } from '@/i18n/language-provider';
 
@@ -66,11 +67,26 @@ export function AdminBankAccountPage() {
   const [createForm, setCreateForm] = useState({ bankCode: '', accountNo: '', accountName: '' });
   const [editForm, setEditForm] = useState({ bankCode: '', accountNo: '', accountName: '' });
   const [formErrors, setFormErrors] = useState<{ bankCode?: string; accountNo?: string; accountName?: string }>({});
+  const [bankOptions, setBankOptions] = useState<BankListItem[]>([]);
+  const [isBankOptionsLoading, setIsBankOptionsLoading] = useState(false);
 
   const pageOptions = useMemo(() => {
     const calculatedPages = Math.max(1, totalPages || Math.ceil(totalItems / limit) || 1);
     return Array.from({ length: calculatedPages }, (_, index) => index + 1);
   }, [limit, totalItems, totalPages]);
+  const editBankOptions = useMemo(() => {
+    if (!editForm.bankCode) return bankOptions;
+    if (bankOptions.some((bank) => bank.code === editForm.bankCode)) return bankOptions;
+    return [
+      ...bankOptions,
+      {
+        id: -1,
+        code: editForm.bankCode,
+        name: editForm.bankCode,
+        status: 'inactive',
+      },
+    ];
+  }, [bankOptions, editForm.bankCode]);
 
   const handleAuthError = useCallback((error: unknown) => {
     if (error instanceof ApiAuthError) {
@@ -114,6 +130,30 @@ export function AdminBankAccountPage() {
   useEffect(() => {
     void fetchData();
   }, [fetchData]);
+
+  const fetchBankOptions = useCallback(async () => {
+    if (!canAdd && !canUpdate) {
+      setBankOptions([]);
+      return;
+    }
+    setIsBankOptionsLoading(true);
+    try {
+      const response = await fetchBankList({ page: 1, limit: 1000, status: 'active' });
+      setBankOptions(response.data ?? []);
+    } catch (error) {
+      if (handleAuthError(error)) return;
+      toast.error(error instanceof Error ? error.message : t('bankList.toast.loadError'), {
+        duration: 1500,
+        style: errorToastStyle,
+      });
+    } finally {
+      setIsBankOptionsLoading(false);
+    }
+  }, [canAdd, canUpdate, handleAuthError, t]);
+
+  useEffect(() => {
+    void fetchBankOptions();
+  }, [fetchBankOptions]);
 
   const getFieldError = (labelKey: string, value: string) => {
     if (!value.trim()) return t(`${labelKey}.required`);
@@ -296,12 +336,26 @@ export function AdminBankAccountPage() {
                 <DialogBody className="space-y-4">
                   <div className="space-y-2">
                     <Label htmlFor="bank-account-bank-code">{t('bankAccount.form.bankCode')}</Label>
-                    <Input
-                      id="bank-account-bank-code"
+                    <Select
                       value={createForm.bankCode}
-                      onChange={(event) => setCreateForm((prev) => ({ ...prev, bankCode: event.target.value }))}
-                      placeholder={t('bankAccount.form.bankCodePlaceholder')}
-                    />
+                      onValueChange={(value) => setCreateForm((prev) => ({ ...prev, bankCode: value }))}
+                      disabled={isBankOptionsLoading}
+                    >
+                      <SelectTrigger id="bank-account-bank-code">
+                        <SelectValue
+                          placeholder={
+                            isBankOptionsLoading ? t('common.loading') : t('bankAccount.form.bankCodePlaceholder')
+                          }
+                        />
+                      </SelectTrigger>
+                      <SelectContent searchable searchPlaceholder={t('profit.withdraw.bankCodeSearchPlaceholder')}>
+                        {bankOptions.map((bank) => (
+                          <SelectItem key={bank.id} value={bank.code}>
+                            {bank.code} - {bank.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                     {formErrors.bankCode && <p className="text-sm text-destructive">{formErrors.bankCode}</p>}
                   </div>
                   <div className="space-y-2">
@@ -476,12 +530,24 @@ export function AdminBankAccountPage() {
               <DialogBody className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="bank-account-edit-bank-code">{t('bankAccount.form.bankCode')}</Label>
-                  <Input
-                    id="bank-account-edit-bank-code"
+                  <Select
                     value={editForm.bankCode}
-                    onChange={(event) => setEditForm((prev) => ({ ...prev, bankCode: event.target.value }))}
-                    placeholder={t('bankAccount.form.bankCodePlaceholder')}
-                  />
+                    onValueChange={(value) => setEditForm((prev) => ({ ...prev, bankCode: value }))}
+                    disabled={isBankOptionsLoading}
+                  >
+                    <SelectTrigger id="bank-account-edit-bank-code">
+                      <SelectValue
+                        placeholder={isBankOptionsLoading ? t('common.loading') : t('bankAccount.form.bankCodePlaceholder')}
+                      />
+                    </SelectTrigger>
+                    <SelectContent searchable searchPlaceholder={t('profit.withdraw.bankCodeSearchPlaceholder')}>
+                      {editBankOptions.map((bank) => (
+                        <SelectItem key={bank.id} value={bank.code}>
+                          {bank.code} - {bank.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                   {formErrors.bankCode && <p className="text-sm text-destructive">{formErrors.bankCode}</p>}
                 </div>
                 <div className="space-y-2">

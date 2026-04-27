@@ -1268,7 +1268,7 @@ export function AdminPayinPage() {
         ),
         render: (payin) => (
           <div className="flex w-full items-center justify-end sm:justify-center">
-            {canResendCallback && payin.status?.toLowerCase() !== 'pending' && (
+            {canResendCallback && !['pending', 'failed'].includes(payin.status?.toLowerCase() ?? '') && (
               <Button
                 size="sm"
                 className="w-full max-w-[120px] bg-primary text-white hover:bg-primary/90 active:bg-primary/80"

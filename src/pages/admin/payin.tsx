@@ -87,6 +87,16 @@ interface PayinListResponse {
   };
 }
 
+interface MerchantFilterItem {
+  id: number;
+  name?: string;
+}
+
+interface MerchantFilterListResponse {
+  status: boolean;
+  data?: MerchantFilterItem[];
+}
+
 const formatAmount = (amount?: number) =>
   typeof amount === 'number' ? amount.toLocaleString('id-ID', { style: 'currency', currency: 'IDR' }) : '-';
 
@@ -182,7 +192,7 @@ interface PayinFiltersProps {
   platformTrxIdRef: React.MutableRefObject<HTMLInputElement | null>;
   merchantTrxIdRef: React.MutableRefObject<HTMLInputElement | null>;
   partnerTrxIdRef: React.MutableRefObject<HTMLInputElement | null>;
-  idMerchantRef: React.MutableRefObject<HTMLInputElement | null>;
+  idMerchantRef: React.MutableRefObject<HTMLSelectElement | null>;
   idAgentRef: React.MutableRefObject<HTMLInputElement | null>;
   rrnRef: React.MutableRefObject<HTMLInputElement | null>;
   idSettlementRef: React.MutableRefObject<HTMLInputElement | null>;
@@ -430,6 +440,22 @@ const PayinFilters = memo(function PayinFilters({
   const { t } = useLanguage();
   const [isFilterDialogOpen, setIsFilterDialogOpen] = useState(false);
   const [statusDraft, setStatusDraft] = useState(status);
+  const [isLoadingMerchants, setIsLoadingMerchants] = useState(false);
+  const [merchants, setMerchants] = useState<MerchantFilterItem[]>([]);
+  useEffect(() => {
+    const fetchMerchants = async () => {
+      setIsLoadingMerchants(true);
+      try {
+        const response = await apiFetch<MerchantFilterListResponse>('/merchant?page=1&limit=1000');
+        setMerchants(Array.isArray(response.data) ? response.data : []);
+      } catch {
+        setMerchants([]);
+      } finally {
+        setIsLoadingMerchants(false);
+      }
+    };
+    void fetchMerchants();
+  }, []);
   useEffect(() => {
     setStatusDraft(status);
   }, [status]);
@@ -668,13 +694,21 @@ const PayinFilters = memo(function PayinFilters({
                 </div>
                 <div className="flex w-full flex-col gap-2">
                   <Label htmlFor="payin-filter-merchant-id">{t('payin.filters.merchantId')}</Label>
-                  <Input
+                  <select
                     key={`merchant-${filterResetKey}`}
                     id="payin-filter-merchant-id"
                     defaultValue={idMerchant}
                     ref={idMerchantRef}
-                    placeholder={t('payin.filters.merchantIdPlaceholder')}
-                  />
+                    className="h-10 rounded-md border border-input bg-background px-3 py-2 text-sm"
+                    disabled={isLoadingMerchants}
+                  >
+                    <option value="">{t('payin.filters.merchantIdAll')}</option>
+                    {merchants.map((merchant) => (
+                      <option key={merchant.id} value={String(merchant.id)}>
+                        {merchant.id} - {merchant.name ?? '-'}
+                      </option>
+                    ))}
+                  </select>
                 </div>
                 <div className="flex w-full flex-col gap-2">
                   <Label htmlFor="payin-filter-agent-id">{t('payin.filters.agentId')}</Label>
@@ -1038,7 +1072,7 @@ export function AdminPayinPage() {
   const partnerTrxIdRef = useRef<HTMLInputElement | null>(null);
   const storeNameRef = useRef<HTMLInputElement | null>(null);
   const nmidRef = useRef<HTMLInputElement | null>(null);
-  const idMerchantRef = useRef<HTMLInputElement | null>(null);
+  const idMerchantRef = useRef<HTMLSelectElement | null>(null);
   const idAgentRef = useRef<HTMLInputElement | null>(null);
   const rrnRef = useRef<HTMLInputElement | null>(null);
   const idSettlementRef = useRef<HTMLInputElement | null>(null);

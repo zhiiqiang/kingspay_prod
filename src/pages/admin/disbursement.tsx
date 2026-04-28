@@ -81,6 +81,16 @@ interface DisbursementListResponse {
   };
 }
 
+interface MerchantFilterItem {
+  id: number;
+  name?: string;
+}
+
+interface MerchantFilterListResponse {
+  status: boolean;
+  data?: MerchantFilterItem[];
+}
+
 const formatAmount = (amount?: number) =>
   typeof amount === 'number' ? amount.toLocaleString('id-ID', { style: 'currency', currency: 'IDR' }) : '-';
 
@@ -182,7 +192,7 @@ interface DisbursementFiltersProps {
   platformTrxIdRef: React.MutableRefObject<HTMLInputElement | null>;
   merchantTrxIdRef: React.MutableRefObject<HTMLInputElement | null>;
   partnerTrxIdRef: React.MutableRefObject<HTMLInputElement | null>;
-  idMerchantRef: React.MutableRefObject<HTMLInputElement | null>;
+  idMerchantRef: React.MutableRefObject<HTMLSelectElement | null>;
   idAgentRef: React.MutableRefObject<HTMLInputElement | null>;
   createdFromInput: string;
   createdToInput: string;
@@ -400,6 +410,22 @@ const DisbursementFilters = memo(function DisbursementFilters({
   const { t } = useLanguage();
   const [isFilterDialogOpen, setIsFilterDialogOpen] = useState(false);
   const [statusDraft, setStatusDraft] = useState(status);
+  const [isLoadingMerchants, setIsLoadingMerchants] = useState(false);
+  const [merchants, setMerchants] = useState<MerchantFilterItem[]>([]);
+  useEffect(() => {
+    const fetchMerchants = async () => {
+      setIsLoadingMerchants(true);
+      try {
+        const response = await apiFetch<MerchantFilterListResponse>('/merchant?page=1&limit=1000');
+        setMerchants(Array.isArray(response.data) ? response.data : []);
+      } catch {
+        setMerchants([]);
+      } finally {
+        setIsLoadingMerchants(false);
+      }
+    };
+    void fetchMerchants();
+  }, []);
   useEffect(() => {
     setStatusDraft(status);
   }, [status]);
@@ -592,13 +618,21 @@ const DisbursementFilters = memo(function DisbursementFilters({
                 </div>
                 <div className="flex w-full flex-col gap-2">
                   <Label htmlFor="disbursement-filter-merchant-id">{t('disbursement.filters.merchantId')}</Label>
-                  <Input
+                  <select
                     key={`merchant-${filterResetKey}`}
                     id="disbursement-filter-merchant-id"
                     defaultValue={idMerchant}
                     ref={idMerchantRef}
-                    placeholder={t('disbursement.filters.merchantIdPlaceholder')}
-                  />
+                    className="h-10 rounded-md border border-input bg-background px-3 py-2 text-sm"
+                    disabled={isLoadingMerchants}
+                  >
+                    <option value="">{t('disbursement.filters.merchantIdAll')}</option>
+                    {merchants.map((merchant) => (
+                      <option key={merchant.id} value={String(merchant.id)}>
+                        {merchant.id} - {merchant.name ?? '-'}
+                      </option>
+                    ))}
+                  </select>
                 </div>
                 <div className="flex w-full flex-col gap-2">
                   <Label htmlFor="disbursement-filter-agent-id">{t('disbursement.filters.agentId')}</Label>
@@ -927,7 +961,7 @@ export function AdminDisbursementPage() {
   const platformTrxIdRef = useRef<HTMLInputElement | null>(null);
   const merchantTrxIdRef = useRef<HTMLInputElement | null>(null);
   const partnerTrxIdRef = useRef<HTMLInputElement | null>(null);
-  const idMerchantRef = useRef<HTMLInputElement | null>(null);
+  const idMerchantRef = useRef<HTMLSelectElement | null>(null);
   const idAgentRef = useRef<HTMLInputElement | null>(null);
   const skipAutoFetchRef = useRef(false);
   const isTableBusy = isLoading || isPending;

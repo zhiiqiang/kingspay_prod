@@ -309,7 +309,7 @@ export function AdminAgentPage() {
   const fetchMerchants = useCallback(async () => {
     setIsLoadingMerchants(true);
     try {
-      const response = await apiFetch<MerchantListResponse>('/merchant?page=1&limit=10');
+      const response = await apiFetch<MerchantListResponse>('/merchant?page=1&limit=1000');
       setMerchants(Array.isArray(response.data) ? response.data : []);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : t('agents.toast.loadMerchantsError'), {
@@ -820,12 +820,31 @@ export function AdminAgentPage() {
                   </div>
                   <div className="flex flex-col gap-2">
                     <Label htmlFor="agent-filter-merchant">{t('agents.fields.merchantId')}</Label>
-                    <Input
-                      id="agent-filter-merchant"
-                      placeholder={t('agents.filters.merchantIdPlaceholder')}
-                      value={filterInputs.idMerchant}
-                      onChange={(event) => setFilterInputs((prev) => ({ ...prev, idMerchant: event.target.value }))}
-                    />
+                    <Select
+                      value={filterInputs.idMerchant || 'all'}
+                      onValueChange={(value) =>
+                        setFilterInputs((prev) => ({ ...prev, idMerchant: value === 'all' ? '' : value }))
+                      }
+                      disabled={isLoadingMerchants}
+                    >
+                      <SelectTrigger id="agent-filter-merchant" className="bg-background">
+                        <SelectValue
+                          placeholder={
+                            isLoadingMerchants
+                              ? t('agents.placeholders.loadingMerchants')
+                              : t('agents.filters.merchantIdPlaceholder')
+                          }
+                        />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">{t('agents.filters.merchantAll')}</SelectItem>
+                        {merchants.map((merchant) => (
+                          <SelectItem key={merchant.id} value={String(merchant.id)}>
+                            {merchant.id} - {merchant.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                 </DialogBody>
                 <DialogFooter className="flex flex-col gap-2 sm:flex-row sm:justify-end">

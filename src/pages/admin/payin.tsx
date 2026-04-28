@@ -87,6 +87,26 @@ interface PayinListResponse {
   };
 }
 
+interface MerchantFilterItem {
+  id: number;
+  name?: string;
+}
+
+interface MerchantFilterListResponse {
+  status: boolean;
+  data?: MerchantFilterItem[];
+}
+
+interface AgentFilterItem {
+  id: number;
+  name?: string;
+}
+
+interface AgentFilterListResponse {
+  status: boolean;
+  data?: AgentFilterItem[] | { data?: AgentFilterItem[] };
+}
+
 const formatAmount = (amount?: number) =>
   typeof amount === 'number' ? amount.toLocaleString('id-ID', { style: 'currency', currency: 'IDR' }) : '-';
 
@@ -430,9 +450,46 @@ const PayinFilters = memo(function PayinFilters({
   const { t } = useLanguage();
   const [isFilterDialogOpen, setIsFilterDialogOpen] = useState(false);
   const [statusDraft, setStatusDraft] = useState(status);
+  const [isLoadingMerchants, setIsLoadingMerchants] = useState(false);
+  const [merchants, setMerchants] = useState<MerchantFilterItem[]>([]);
+  const [agents, setAgents] = useState<AgentFilterItem[]>([]);
+  const [idMerchantDraft, setIdMerchantDraft] = useState(idMerchant);
+  const [idAgentDraft, setIdAgentDraft] = useState(idAgent);
+  useEffect(() => {
+    const fetchFilterOptions = async () => {
+      setIsLoadingMerchants(true);
+      try {
+        const [merchantResponse, agentResponse] = await Promise.all([
+          apiFetch<MerchantFilterListResponse>('/merchant?page=1&limit=1000'),
+          apiFetch<AgentFilterListResponse>('user?email=&name=&role=agent&idMerchant=&limit=1000', { method: 'GET' }),
+        ]);
+        setMerchants(Array.isArray(merchantResponse.data) ? merchantResponse.data : []);
+        const agentPayload = agentResponse.data;
+        if (Array.isArray(agentPayload)) {
+          setAgents(agentPayload);
+        } else if (agentPayload && Array.isArray(agentPayload.data)) {
+          setAgents(agentPayload.data);
+        } else {
+          setAgents([]);
+        }
+      } catch {
+        setMerchants([]);
+        setAgents([]);
+      } finally {
+        setIsLoadingMerchants(false);
+      }
+    };
+    void fetchFilterOptions();
+  }, []);
   useEffect(() => {
     setStatusDraft(status);
   }, [status]);
+  useEffect(() => {
+    setIdMerchantDraft(idMerchant);
+  }, [idMerchant]);
+  useEffect(() => {
+    setIdAgentDraft(idAgent);
+  }, [idAgent]);
   const appliedRef = useRef(false);
   const snapshotRef = useRef({
     platformTrxId,
@@ -488,6 +545,8 @@ const PayinFilters = memo(function PayinFilters({
     if (nmidRef.current) nmidRef.current.value = snapshot.nmid;
     if (idMerchantRef.current) idMerchantRef.current.value = snapshot.idMerchant;
     if (idAgentRef.current) idAgentRef.current.value = snapshot.idAgent;
+    setIdMerchantDraft(snapshot.idMerchant);
+    setIdAgentDraft(snapshot.idAgent);
     if (rrnRef.current) rrnRef.current.value = snapshot.rrn;
     if (idSettlementRef.current) idSettlementRef.current.value = snapshot.idSettlement;
     setStatusDraft(snapshot.status);
@@ -516,6 +575,8 @@ const PayinFilters = memo(function PayinFilters({
       if (nextOpen) {
         appliedRef.current = false;
         setStatusDraft(status);
+        setIdMerchantDraft(idMerchantRef.current?.value ?? idMerchant);
+        setIdAgentDraft(idAgentRef.current?.value ?? idAgent);
         snapshotRef.current = {
           platformTrxId: platformTrxIdRef.current?.value ?? platformTrxId,
           merchantTrxId: merchantTrxIdRef.current?.value ?? merchantTrxId,
@@ -668,23 +729,55 @@ const PayinFilters = memo(function PayinFilters({
                 </div>
                 <div className="flex w-full flex-col gap-2">
                   <Label htmlFor="payin-filter-merchant-id">{t('payin.filters.merchantId')}</Label>
-                  <Input
+                  <Input key={`merchant-hidden-${filterResetKey}`} defaultValue={idMerchant} ref={idMerchantRef} className="hidden" />
+                  <Select
                     key={`merchant-${filterResetKey}`}
-                    id="payin-filter-merchant-id"
-                    defaultValue={idMerchant}
-                    ref={idMerchantRef}
-                    placeholder={t('payin.filters.merchantIdPlaceholder')}
-                  />
+                    value={idMerchantDraft || 'all'}
+                    onValueChange={(value) => {
+                      const normalizedValue = value === 'all' ? '' : value;
+                      setIdMerchantDraft(normalizedValue);
+                      if (idMerchantRef.current) idMerchantRef.current.value = normalizedValue;
+                    }}
+                    disabled={isLoadingMerchants}
+                  >
+                    <SelectTrigger id="payin-filter-merchant-id" className="bg-background">
+                      <SelectValue placeholder={t('payin.filters.merchantIdPlaceholder')} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">{t('payin.filters.merchantIdAll')}</SelectItem>
+                      {merchants.map((merchant) => (
+                        <SelectItem key={merchant.id} value={String(merchant.id)}>
+                          {merchant.id} - {merchant.name ?? '-'}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div className="flex w-full flex-col gap-2">
                   <Label htmlFor="payin-filter-agent-id">{t('payin.filters.agentId')}</Label>
-                  <Input
+                  <Input key={`agent-hidden-${filterResetKey}`} defaultValue={idAgent} ref={idAgentRef} className="hidden" />
+                  <Select
                     key={`agent-${filterResetKey}`}
-                    id="payin-filter-agent-id"
-                    defaultValue={idAgent}
-                    ref={idAgentRef}
-                    placeholder={t('payin.filters.agentIdPlaceholder')}
-                  />
+                    value={idAgentDraft || 'all'}
+                    onValueChange={(value) => {
+                      const normalizedValue = value === 'all' ? '' : value;
+                      setIdAgentDraft(normalizedValue);
+                      if (idAgentRef.current) idAgentRef.current.value = normalizedValue;
+                    }}
+                    disabled={isLoadingMerchants}
+                  >
+                    <SelectTrigger id="payin-filter-agent-id" className="bg-background">
+                      <SelectValue placeholder={t('payin.filters.agentIdPlaceholder')} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">{t('payin.filters.agentIdAll')}</SelectItem>
+                      {agents.map((agent) => (
+                        <SelectItem key={agent.id} value={String(agent.id)}>
+                          {agent.id} - {agent.name ?? '-'}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div className="flex w-full flex-col gap-2">
                   <Label htmlFor="payin-filter-status">{t('payin.filters.status')}</Label>

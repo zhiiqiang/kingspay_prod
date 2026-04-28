@@ -1818,13 +1818,25 @@ export function AdminEngineListPage() {
                   </div>
                   <div className="flex flex-col gap-2">
                     <Label htmlFor="merchant-filter-agent">{t('merchants.filters.agentId')}</Label>
-                    <Input
-                      id="merchant-filter-agent"
-                      inputMode="numeric"
-                      placeholder={t('merchants.filters.agentIdPlaceholder')}
-                      value={filterInputs.idAgent}
-                      onChange={(event) => setFilterInputs((prev) => ({ ...prev, idAgent: event.target.value }))}
-                    />
+                    <Select
+                      value={filterInputs.idAgent || 'all'}
+                      onValueChange={(value) => setFilterInputs((prev) => ({ ...prev, idAgent: value === 'all' ? '' : value }))}
+                      disabled={isLoadingAgents}
+                    >
+                      <SelectTrigger id="merchant-filter-agent" className="bg-background">
+                        <SelectValue
+                          placeholder={isLoadingAgents ? t('agents.placeholders.loadingMerchants') : t('merchants.filters.agentIdPlaceholder')}
+                        />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">{t('merchants.filters.agentIdAll')}</SelectItem>
+                        {agents.map((agent) => (
+                          <SelectItem key={agent.id} value={String(agent.id)}>
+                            {agent.id} - {agent.name ?? '-'}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                   <div className="flex flex-col gap-2">
                     <Label>{t('merchants.filters.payinStatus')}</Label>

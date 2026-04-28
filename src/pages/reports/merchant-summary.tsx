@@ -57,6 +57,26 @@ interface MerchantSummaryResponse {
   };
 }
 
+interface MerchantFilterItem {
+  id: number;
+  name?: string;
+}
+
+interface MerchantFilterListResponse {
+  status: boolean;
+  data?: MerchantFilterItem[];
+}
+
+interface AgentFilterItem {
+  id: number;
+  name?: string;
+}
+
+interface AgentFilterListResponse {
+  status: boolean;
+  data?: AgentFilterItem[] | { data?: AgentFilterItem[] };
+}
+
 interface MerchantSummaryFilters {
   idMerchant: string;
   idAgent: string;
@@ -85,6 +105,9 @@ export function MerchantSummaryReportPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isFilterDialogOpen, setIsFilterDialogOpen] = useState(false);
+  const [isLoadingMerchants, setIsLoadingMerchants] = useState(false);
+  const [merchants, setMerchants] = useState<MerchantFilterItem[]>([]);
+  const [agents, setAgents] = useState<AgentFilterItem[]>([]);
 
   const defaultFilter = useMemo(
     () => ({
@@ -158,6 +181,33 @@ export function MerchantSummaryReportPage() {
 
   useEffect(() => {
     void fetchMerchantSummary(1, pagination.limit, filters);
+  }, []);
+
+  useEffect(() => {
+    const fetchFilterOptions = async () => {
+      setIsLoadingMerchants(true);
+      try {
+        const [merchantResponse, agentResponse] = await Promise.all([
+          apiFetch<MerchantFilterListResponse>('/merchant?page=1&limit=1000'),
+          apiFetch<AgentFilterListResponse>('user?email=&name=&role=agent&idMerchant=&limit=1000', { method: 'GET' }),
+        ]);
+        setMerchants(Array.isArray(merchantResponse.data) ? merchantResponse.data : []);
+        const agentPayload = agentResponse.data;
+        if (Array.isArray(agentPayload)) {
+          setAgents(agentPayload);
+        } else if (agentPayload && Array.isArray(agentPayload.data)) {
+          setAgents(agentPayload.data);
+        } else {
+          setAgents([]);
+        }
+      } catch {
+        setMerchants([]);
+        setAgents([]);
+      } finally {
+        setIsLoadingMerchants(false);
+      }
+    };
+    void fetchFilterOptions();
   }, []);
 
   const handleDialogOpenChange = useCallback(
@@ -263,23 +313,61 @@ export function MerchantSummaryReportPage() {
                     <Label htmlFor="merchant-summary-filter-merchant" className="text-sm font-medium text-muted-foreground">
                       {t('reports.merchantSummary.filters.idMerchant')}
                     </Label>
-                    <Input
-                      id="merchant-summary-filter-merchant"
-                      value={filterDraft.idMerchant}
-                      onChange={(event) => setFilterDraft((prev) => ({ ...prev, idMerchant: event.target.value }))}
-                      placeholder={t('reports.merchantSummary.filters.idMerchantPlaceholder')}
-                    />
+                    <Select
+                      value={filterDraft.idMerchant || 'all'}
+                      onValueChange={(value) =>
+                        setFilterDraft((prev) => ({ ...prev, idMerchant: value === 'all' ? '' : value }))
+                      }
+                      disabled={isLoadingMerchants}
+                    >
+                      <SelectTrigger id="merchant-summary-filter-merchant" className="bg-background">
+                        <SelectValue
+                          placeholder={
+                            isLoadingMerchants
+                              ? t('agents.placeholders.loadingMerchants')
+                              : t('reports.merchantSummary.filters.idMerchantPlaceholder')
+                          }
+                        />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">{t('reports.merchantSummary.filters.idMerchantAll')}</SelectItem>
+                        {merchants.map((merchant) => (
+                          <SelectItem key={merchant.id} value={String(merchant.id)}>
+                            {merchant.id} - {merchant.name ?? '-'}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="merchant-summary-filter-agent" className="text-sm font-medium text-muted-foreground">
                       {t('reports.merchantSummary.filters.idAgent')}
                     </Label>
-                    <Input
-                      id="merchant-summary-filter-agent"
-                      value={filterDraft.idAgent}
-                      onChange={(event) => setFilterDraft((prev) => ({ ...prev, idAgent: event.target.value }))}
-                      placeholder={t('reports.merchantSummary.filters.idAgentPlaceholder')}
-                    />
+                    <Select
+                      value={filterDraft.idAgent || 'all'}
+                      onValueChange={(value) =>
+                        setFilterDraft((prev) => ({ ...prev, idAgent: value === 'all' ? '' : value }))
+                      }
+                      disabled={isLoadingMerchants}
+                    >
+                      <SelectTrigger id="merchant-summary-filter-agent" className="bg-background">
+                        <SelectValue
+                          placeholder={
+                            isLoadingMerchants
+                              ? t('agents.placeholders.loadingMerchants')
+                              : t('reports.merchantSummary.filters.idAgentPlaceholder')
+                          }
+                        />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">{t('reports.merchantSummary.filters.idAgentAll')}</SelectItem>
+                        {agents.map((agent) => (
+                          <SelectItem key={agent.id} value={String(agent.id)}>
+                            {agent.id} - {agent.name ?? '-'}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                   <div className="space-y-2">
                     <Label className="text-sm font-medium text-muted-foreground">{t('reports.merchantSummary.dateFrom')}</Label>

@@ -421,7 +421,7 @@ export function AdminOperatorPage() {
   const [selectedPermissionSet, setSelectedPermissionSet] = useState<Set<string>>(new Set());
   const [createPermissionSet, setCreatePermissionSet] = useState<Set<string>>(new Set());
   const [permissionOperatorName, setPermissionOperatorName] = useState('');
-  const [currentUserPermissions] = useState(() => new Set(getStoredUserPermissions()));
+  const currentUserPermissions = useMemo(() => new Set(getStoredUserPermissions()), [permissionDialogOpen, operatorDialogOpen]);
   const formatMessage = (key: string, values: Record<string, string | number>) =>
     Object.entries(values).reduce((message, [placeholder, value]) => {
       return message.replace(`{${placeholder}}`, String(value));

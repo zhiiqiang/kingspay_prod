@@ -67,6 +67,16 @@ interface MerchantFilterListResponse {
   data?: MerchantFilterItem[];
 }
 
+interface AgentFilterItem {
+  id: number;
+  name?: string;
+}
+
+interface AgentFilterListResponse {
+  status: boolean;
+  data?: AgentFilterItem[] | { data?: AgentFilterItem[] };
+}
+
 interface MerchantSummaryFilters {
   idMerchant: string;
   idAgent: string;
@@ -97,6 +107,7 @@ export function MerchantSummaryReportPage() {
   const [isFilterDialogOpen, setIsFilterDialogOpen] = useState(false);
   const [isLoadingMerchants, setIsLoadingMerchants] = useState(false);
   const [merchants, setMerchants] = useState<MerchantFilterItem[]>([]);
+  const [agents, setAgents] = useState<AgentFilterItem[]>([]);
 
   const defaultFilter = useMemo(
     () => ({
@@ -173,18 +184,30 @@ export function MerchantSummaryReportPage() {
   }, []);
 
   useEffect(() => {
-    const fetchMerchants = async () => {
+    const fetchFilterOptions = async () => {
       setIsLoadingMerchants(true);
       try {
-        const response = await apiFetch<MerchantFilterListResponse>('/merchant?page=1&limit=1000');
-        setMerchants(Array.isArray(response.data) ? response.data : []);
+        const [merchantResponse, agentResponse] = await Promise.all([
+          apiFetch<MerchantFilterListResponse>('/merchant?page=1&limit=1000'),
+          apiFetch<AgentFilterListResponse>('user?email=&name=&role=agent&idMerchant=&limit=1000', { method: 'GET' }),
+        ]);
+        setMerchants(Array.isArray(merchantResponse.data) ? merchantResponse.data : []);
+        const agentPayload = agentResponse.data;
+        if (Array.isArray(agentPayload)) {
+          setAgents(agentPayload);
+        } else if (agentPayload && Array.isArray(agentPayload.data)) {
+          setAgents(agentPayload.data);
+        } else {
+          setAgents([]);
+        }
       } catch {
         setMerchants([]);
+        setAgents([]);
       } finally {
         setIsLoadingMerchants(false);
       }
     };
-    void fetchMerchants();
+    void fetchFilterOptions();
   }, []);
 
   const handleDialogOpenChange = useCallback(
@@ -320,12 +343,31 @@ export function MerchantSummaryReportPage() {
                     <Label htmlFor="merchant-summary-filter-agent" className="text-sm font-medium text-muted-foreground">
                       {t('reports.merchantSummary.filters.idAgent')}
                     </Label>
-                    <Input
-                      id="merchant-summary-filter-agent"
-                      value={filterDraft.idAgent}
-                      onChange={(event) => setFilterDraft((prev) => ({ ...prev, idAgent: event.target.value }))}
-                      placeholder={t('reports.merchantSummary.filters.idAgentPlaceholder')}
-                    />
+                    <Select
+                      value={filterDraft.idAgent || 'all'}
+                      onValueChange={(value) =>
+                        setFilterDraft((prev) => ({ ...prev, idAgent: value === 'all' ? '' : value }))
+                      }
+                      disabled={isLoadingMerchants}
+                    >
+                      <SelectTrigger id="merchant-summary-filter-agent" className="bg-background">
+                        <SelectValue
+                          placeholder={
+                            isLoadingMerchants
+                              ? t('agents.placeholders.loadingMerchants')
+                              : t('reports.merchantSummary.filters.idAgentPlaceholder')
+                          }
+                        />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">{t('reports.merchantSummary.filters.idAgentAll')}</SelectItem>
+                        {agents.map((agent) => (
+                          <SelectItem key={agent.id} value={String(agent.id)}>
+                            {agent.id} - {agent.name ?? '-'}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                   <div className="space-y-2">
                     <Label className="text-sm font-medium text-muted-foreground">{t('reports.merchantSummary.dateFrom')}</Label>

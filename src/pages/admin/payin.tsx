@@ -216,6 +216,7 @@ interface PayinFiltersProps {
   visibleColumns: Set<PayinColumnId>;
   isRefreshing: boolean;
   isExporting: boolean;
+  canExport: boolean;
   onSearch: (payload: { status: string }) => void;
   onRefresh: () => void;
   onReset: () => void;
@@ -433,6 +434,7 @@ const PayinFilters = memo(function PayinFilters({
   visibleColumns,
   isRefreshing,
   isExporting,
+  canExport,
   onSearch,
   onRefresh,
   onReset,
@@ -869,24 +871,26 @@ const PayinFilters = memo(function PayinFilters({
             </DialogFooter>
           </DialogContent>
         </Dialog>
-        <Button
-          className="bg-primary text-white hover:bg-primary/90 active:bg-primary/80 flex items-center gap-2"
-          onClick={onExport}
-          disabled={isExporting}
-          aria-label={t('payin.export.title')}
-        >
-          {isExporting ? (
-            <>
-              <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
-              {t('payin.export.exporting')}
-            </>
-          ) : (
-            <>
-              <Download className="h-4 w-4" aria-hidden />
-              {t('payin.export.title')}
-            </>
-          )}
-        </Button>
+        {canExport && (
+          <Button
+            className="bg-primary text-white hover:bg-primary/90 active:bg-primary/80 flex items-center gap-2"
+            onClick={onExport}
+            disabled={isExporting}
+            aria-label={t('payin.export.title')}
+          >
+            {isExporting ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+                {t('payin.export.exporting')}
+              </>
+            ) : (
+              <>
+                <Download className="h-4 w-4" aria-hidden />
+                {t('payin.export.title')}
+              </>
+            )}
+          </Button>
+        )}
         <Button
           variant="outline"
           onClick={onReset}
@@ -1143,6 +1147,7 @@ export function AdminPayinPage() {
   const [callbackItem, setCallbackItem] = useState<PayinItem | null>(null);
   const [isCallbackSubmitting, setIsCallbackSubmitting] = useState(false);
   const canResendCallback = useMemo(() => getStoredUserPermissions().includes('trx:resendCallback'), []);
+  const canExport = useMemo(() => getStoredUserPermissions().includes('payin:export'), []);
 
   const handleCallbackOpen = useCallback((item: PayinItem) => {
     setCallbackItem(item);
@@ -2076,6 +2081,7 @@ export function AdminPayinPage() {
           onReset={handleResetFilters}
           onExport={handleExport}
           isExporting={isExporting}
+          canExport={canExport}
           onDatePickerApply={handleDatePickerApply}
           onDatePickerClose={handleDatePickerClose}
           onSuccessDatePickerApply={handleSuccessDatePickerApply}

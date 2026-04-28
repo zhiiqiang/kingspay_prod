@@ -289,6 +289,11 @@ const PERMISSION_GROUPS: PermissionGroup[] = [
         descriptionKey: 'operators.permissions.payin.listDescription',
       },
       {
+        key: 'payin:export',
+        labelKey: 'operators.permissions.payin.export',
+        descriptionKey: 'operators.permissions.payin.exportDescription',
+      },
+      {
         key: 'trx:resendCallback',
         labelKey: 'operators.permissions.transactions.resendCallback',
         descriptionKey: 'operators.permissions.transactions.resendCallbackDescription',
@@ -342,6 +347,31 @@ const PERMISSION_GROUPS: PermissionGroup[] = [
         key: 'report:merchant-summary',
         labelKey: 'operators.permissions.report.merchantSummary',
         descriptionKey: 'operators.permissions.report.merchantSummaryDescription',
+      },
+    ],
+  },
+  {
+    nameKey: 'operators.permissions.group.bankAccounts',
+    permissions: [
+      {
+        key: 'dataRekening:list',
+        labelKey: 'operators.permissions.dataRekening.list',
+        descriptionKey: 'operators.permissions.dataRekening.listDescription',
+      },
+      {
+        key: 'dataRekening:add',
+        labelKey: 'operators.permissions.dataRekening.add',
+        descriptionKey: 'operators.permissions.dataRekening.addDescription',
+      },
+      {
+        key: 'dataRekening:update',
+        labelKey: 'operators.permissions.dataRekening.update',
+        descriptionKey: 'operators.permissions.dataRekening.updateDescription',
+      },
+      {
+        key: 'dataRekening:delete',
+        labelKey: 'operators.permissions.dataRekening.delete',
+        descriptionKey: 'operators.permissions.dataRekening.deleteDescription',
       },
     ],
   },

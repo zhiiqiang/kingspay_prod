@@ -32,7 +32,7 @@ import { CalendarIcon, CheckCircle2, Eye, EyeOff, Filter, Inbox, Info, RefreshCc
 import { ApiAuthError, apiFetch } from '@/lib/api';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
-import { format, subDays } from 'date-fns';
+import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import {
   DropdownMenu,
@@ -157,7 +157,7 @@ const getDateOnlyString = (date: Date) => {
 const getStartOfDayString = (date: Date) => `${getDateOnlyString(date)} 00:00:00`;
 const getEndOfDayString = (date: Date) => `${getDateOnlyString(date)} 23:59:59`;
 /** Default created-date range: yesterday through today (inclusive). */
-const getDefaultCreatedFromDate = () => getDateOnlyString(subDays(new Date(), 1));
+const getDefaultCreatedFromDate = () => getDateOnlyString(new Date());
 
 type DisbursementColumnId =
   | 'id'
@@ -172,7 +172,6 @@ type DisbursementColumnId =
   | 'bankCode'
   | 'amount'
   | 'biayaChannel'
-  | 'biayaPlatform'
   | 'biayaAgent'
   | 'totalProfit'
   | 'status'
@@ -345,11 +344,6 @@ const DisbursementSummaryCards = memo(function DisbursementSummaryCards({
         value: formatAmount(summary?.sumBiayaChannel),
       },
       {
-        key: 'platform',
-        label: t('disbursement.summary.platformFee'),
-        value: formatAmount(summary?.sumBiayaPlatform),
-      },
-      {
         key: 'agent',
         label: t('disbursement.summary.agentFee'),
         value: formatAmount(summary?.sumBiayaAgent),
@@ -360,7 +354,7 @@ const DisbursementSummaryCards = memo(function DisbursementSummaryCards({
         value: formatAmount(summary?.sumTotalProfit),
       },
     ],
-    [summary?.sumAmount, summary?.sumBiayaAgent, summary?.sumBiayaChannel, summary?.sumBiayaPlatform, summary?.sumTotalProfit, t],
+    [summary?.sumAmount, summary?.sumBiayaAgent, summary?.sumBiayaChannel, summary?.sumTotalProfit, t],
   );
 
   return (
@@ -1001,7 +995,7 @@ export function AdminDisbursementPage() {
   const [partnerTrxId, setPartnerTrxId] = useState('');
   const [idMerchant, setIdMerchant] = useState('');
   const [idAgent, setIdAgent] = useState('');
-  const [status, setStatus] = useState('all');
+  const [status, setStatus] = useState('success');
   const [createdFromDate, setCreatedFromDate] = useState(getDefaultCreatedFromDate());
   const [createdToDate, setCreatedToDate] = useState(getDateOnlyString(new Date()));
   const [createdFromInput, setCreatedFromInput] = useState(getDefaultCreatedFromDate());
@@ -1072,7 +1066,7 @@ export function AdminDisbursementPage() {
     setPartnerTrxId('');
     setIdMerchant('');
     setIdAgent('');
-    setStatus('all');
+    setStatus('success');
     setCreatedFromDate(defaultFromDate);
     setCreatedToDate(today);
     setCreatedFromInput(defaultFromDate);
@@ -1174,13 +1168,6 @@ export function AdminDisbursementPage() {
         headerClassName: 'w-[160px] whitespace-nowrap',
         cellClassName: 'whitespace-nowrap',
         render: (disbursement) => formatAmount(disbursement.biayaChannel),
-      },
-      {
-        id: 'biayaPlatform',
-        label: t('disbursement.table.platformFee'),
-        headerClassName: 'w-[160px] whitespace-nowrap',
-        cellClassName: 'whitespace-nowrap',
-        render: (disbursement) => formatAmount(disbursement.biayaPlatform),
       },
       {
         id: 'biayaAgent',

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { format, subDays } from 'date-fns';
+import { format } from 'date-fns';
 import { toast } from 'sonner';
 import { CalendarIcon, Inbox, RefreshCcw, SlidersHorizontal } from 'lucide-react';
 import { ApiAuthError, apiFetch } from '@/lib/api';
@@ -33,7 +33,6 @@ interface MerchantSummaryItem {
   totalAmount?: number;
   totalProfit?: number;
   feeAgent?: number;
-  feePlatform?: number;
   feeChannel?: number;
   netAmount?: number;
 }
@@ -44,7 +43,6 @@ interface MerchantSummaryResponse {
     totalAmount?: number;
     totalProfit?: number;
     feeAgent?: number;
-    feePlatform?: number;
     feeChannel?: number;
     netAmount?: number;
   };
@@ -97,7 +95,6 @@ export function MerchantSummaryReportPage() {
     totalAmount: 0,
     totalProfit: 0,
     feeAgent: 0,
-    feePlatform: 0,
     feeChannel: 0,
     netAmount: 0,
   });
@@ -113,7 +110,7 @@ export function MerchantSummaryReportPage() {
     () => ({
       idMerchant: '',
       idAgent: '',
-      dateFrom: getDateOnlyString(subDays(new Date(), 1)),
+      dateFrom: getDateOnlyString(new Date()),
       dateTo: getDateOnlyString(new Date()),
     }),
     [],
@@ -156,7 +153,6 @@ export function MerchantSummaryReportPage() {
           totalAmount: response.summary?.totalAmount ?? 0,
           totalProfit: response.summary?.totalProfit ?? 0,
           feeAgent: response.summary?.feeAgent ?? 0,
-          feePlatform: response.summary?.feePlatform ?? 0,
           feeChannel: response.summary?.feeChannel ?? 0,
           netAmount: response.summary?.netAmount ?? 0,
         });
@@ -268,7 +264,6 @@ export function MerchantSummaryReportPage() {
       { key: 'totalAmount', label: t('reports.merchantSummary.totalAmount'), value: formatAmount(summary.totalAmount), badge: 'IDR' },
       { key: 'totalProfit', label: t('reports.merchantSummary.totalProfit'), value: formatAmount(summary.totalProfit), badge: 'IDR' },
       { key: 'feeAgent', label: t('reports.merchantSummary.feeAgent'), value: formatAmount(summary.feeAgent), badge: 'IDR' },
-      { key: 'feePlatform', label: t('reports.merchantSummary.feePlatform'), value: formatAmount(summary.feePlatform), badge: 'IDR' },
       { key: 'feeChannel', label: t('reports.merchantSummary.feeChannel'), value: formatAmount(summary.feeChannel), badge: 'IDR' },
       { key: 'netAmount', label: t('reports.merchantSummary.netAmount'), value: formatAmount(summary.netAmount), badge: 'IDR' },
     ],
@@ -466,7 +461,6 @@ export function MerchantSummaryReportPage() {
                   <TableHead className="min-w-[150px]">{t('reports.merchantSummary.totalAmount')}</TableHead>
                   <TableHead className="min-w-[150px]">{t('reports.merchantSummary.totalProfit')}</TableHead>
                   <TableHead className="min-w-[140px]">{t('reports.merchantSummary.feeAgent')}</TableHead>
-                  <TableHead className="min-w-[150px]">{t('reports.merchantSummary.feePlatform')}</TableHead>
                   <TableHead className="min-w-[150px]">{t('reports.merchantSummary.feeChannel')}</TableHead>
                   <TableHead className="min-w-[150px]">{t('reports.merchantSummary.netAmount')}</TableHead>
                 </TableRow>
@@ -484,7 +478,6 @@ export function MerchantSummaryReportPage() {
                         t('reports.merchantSummary.totalAmount'),
                         t('reports.merchantSummary.totalProfit'),
                         t('reports.merchantSummary.feeAgent'),
-                        t('reports.merchantSummary.feePlatform'),
                         t('reports.merchantSummary.feeChannel'),
                         t('reports.merchantSummary.netAmount'),
                       ].map((label, cellIndex) => (
@@ -497,7 +490,7 @@ export function MerchantSummaryReportPage() {
 
                 {!isLoading && rows.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={11} className="py-10 text-center text-sm text-muted-foreground">
+                    <TableCell colSpan={10} className="py-10 text-center text-sm text-muted-foreground">
                       <div className="flex flex-col items-center justify-center gap-3">
                         <div className="flex h-14 w-14 items-center justify-center rounded-full bg-muted">
                           <Inbox className="h-7 w-7" aria-hidden />
@@ -519,7 +512,6 @@ export function MerchantSummaryReportPage() {
                       <TableCell data-label={t('reports.merchantSummary.totalAmount')} className="whitespace-nowrap">{formatAmount(item.totalAmount)}</TableCell>
                       <TableCell data-label={t('reports.merchantSummary.totalProfit')} className="whitespace-nowrap">{formatAmount(item.totalProfit)}</TableCell>
                       <TableCell data-label={t('reports.merchantSummary.feeAgent')} className="whitespace-nowrap">{formatAmount(item.feeAgent)}</TableCell>
-                      <TableCell data-label={t('reports.merchantSummary.feePlatform')} className="whitespace-nowrap">{formatAmount(item.feePlatform)}</TableCell>
                       <TableCell data-label={t('reports.merchantSummary.feeChannel')} className="whitespace-nowrap">{formatAmount(item.feeChannel)}</TableCell>
                       <TableCell data-label={t('reports.merchantSummary.netAmount')} className="whitespace-nowrap">{formatAmount(item.netAmount)}</TableCell>
                     </TableRow>

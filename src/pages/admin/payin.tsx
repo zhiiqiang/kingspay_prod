@@ -33,7 +33,7 @@ import { ApiAuthError, apiFetch } from '@/lib/api';
 import { getStoredAuthToken, getStoredUserPermissions } from '@/lib/auth';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
-import { format, subDays } from 'date-fns';
+import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import {
   DropdownMenu,
@@ -148,7 +148,7 @@ const getDateOnlyString = (date: Date) => {
 const getStartOfDayString = (date: Date) => `${getDateOnlyString(date)} 00:00:00`;
 const getEndOfDayString = (date: Date) => `${getDateOnlyString(date)} 23:59:59`;
 /** Default created-date range: yesterday through today (inclusive). */
-const getDefaultCreatedFromDate = () => getDateOnlyString(subDays(new Date(), 1));
+const getDefaultCreatedFromDate = () => getDateOnlyString(new Date());
 
 type PayinColumnId =
   | 'id'
@@ -164,7 +164,6 @@ type PayinColumnId =
   | 'amount'
   | 'rate'
   | 'biayaChannel'
-  | 'biayaPlatform'
   | 'biayaAgent'
   | 'netAmount'
   | 'status'
@@ -353,11 +352,6 @@ const PayinSummaryCards = memo(function PayinSummaryCards({
         value: formatAmount(summary?.sumBiayaChannel),
       },
       {
-        key: 'platform',
-        label: t('payin.summary.platformFee'),
-        value: formatAmount(summary?.sumBiayaPlatform),
-      },
-      {
         key: 'agent',
         label: t('payin.summary.agentFee'),
         value: formatAmount(summary?.sumBiayaAgent),
@@ -377,7 +371,6 @@ const PayinSummaryCards = memo(function PayinSummaryCards({
       summary?.sumAmount,
       summary?.sumBiayaAgent,
       summary?.sumBiayaChannel,
-      summary?.sumBiayaPlatform,
       summary?.sumNetAmount,
       summary?.sumProfit,
       t,
@@ -1113,7 +1106,7 @@ export function AdminPayinPage() {
   const [idAgent, setIdAgent] = useState('');
   const [rrn, setRrn] = useState('');
   const [idSettlement, setIdSettlement] = useState('');
-  const [status, setStatus] = useState('all');
+  const [status, setStatus] = useState('success');
   const [createdFromDate, setCreatedFromDate] = useState(getDefaultCreatedFromDate());
   const [createdToDate, setCreatedToDate] = useState(getDateOnlyString(new Date()));
   const [createdFromInput, setCreatedFromInput] = useState(getDefaultCreatedFromDate());
@@ -1171,7 +1164,7 @@ export function AdminPayinPage() {
     setIdAgent('');
     setRrn('');
     setIdSettlement('');
-    setStatus('all');
+    setStatus('success');
     setCreatedFromDate(defaultFromDate);
     setCreatedToDate(today);
     setCreatedFromInput(defaultFromDate);
@@ -1280,13 +1273,6 @@ export function AdminPayinPage() {
         headerClassName: 'w-[160px] whitespace-nowrap',
         cellClassName: 'whitespace-nowrap',
         render: (payin) => formatAmount(payin.biayaChannel),
-      },
-      {
-        id: 'biayaPlatform',
-        label: t('payin.table.platformFee'),
-        headerClassName: 'w-[160px] whitespace-nowrap',
-        cellClassName: 'whitespace-nowrap',
-        render: (payin) => formatAmount(payin.biayaPlatform),
       },
       {
         id: 'biayaAgent',

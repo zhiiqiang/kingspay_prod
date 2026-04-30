@@ -89,6 +89,16 @@ interface ReconciliationActionResponse {
   message?: string;
 }
 
+interface MerchantFilterItem {
+  id: number;
+  name?: string;
+}
+
+interface MerchantFilterListResponse {
+  status: boolean;
+  data?: MerchantFilterItem[];
+}
+
 interface ReconciliationUploadSummary {
   totalUploaded: number;
   notFound: number;
@@ -182,6 +192,23 @@ export function ReconciliationListPage() {
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set());
   const [selectedBatchId, setSelectedBatchId] = useState<number | null>(null);
   const [selectedRowKeys, setSelectedRowKeys] = useState<Set<string>>(new Set());
+  const [isLoadingMerchants, setIsLoadingMerchants] = useState(false);
+  const [merchants, setMerchants] = useState<MerchantFilterItem[]>([]);
+
+  useEffect(() => {
+    const fetchMerchants = async () => {
+      setIsLoadingMerchants(true);
+      try {
+        const response = await apiFetch<MerchantFilterListResponse>('/merchant?page=1&limit=1000');
+        setMerchants(Array.isArray(response.data) ? response.data : []);
+      } catch {
+        setMerchants([]);
+      } finally {
+        setIsLoadingMerchants(false);
+      }
+    };
+    void fetchMerchants();
+  }, []);
 
   const closeActionDialog = useCallback(() => {
     setActionDialogOpen(false);
@@ -933,17 +960,34 @@ export function ReconciliationListPage() {
                   </div>
                   <div className="flex flex-col gap-2">
                     <Label htmlFor="reconciliation-filter-merchant-id">{t('reconciliation.filters.merchantId')}</Label>
-                    <Input
-                      id="reconciliation-filter-merchant-id"
-                      placeholder={t('reconciliation.filters.merchantIdPlaceholder')}
-                      value={filterInputs.idMerchant}
-                      onChange={(event) =>
+                    <Select
+                      value={filterInputs.idMerchant || 'all'}
+                      onValueChange={(value) =>
                         setFilterInputs((prev) => ({
                           ...prev,
-                          idMerchant: event.target.value,
+                          idMerchant: value === 'all' ? '' : value,
                         }))
                       }
-                    />
+                      disabled={isLoadingMerchants}
+                    >
+                      <SelectTrigger id="reconciliation-filter-merchant-id" className="bg-background">
+                        <SelectValue
+                          placeholder={
+                            isLoadingMerchants
+                              ? t('agents.placeholders.loadingMerchants')
+                              : t('reconciliation.filters.merchantIdPlaceholder')
+                          }
+                        />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">{t('reconciliation.filters.merchantIdAll')}</SelectItem>
+                        {merchants.map((merchant) => (
+                          <SelectItem key={merchant.id} value={String(merchant.id)}>
+                            {merchant.id} - {merchant.name ?? '-'}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                   <div className="flex flex-col gap-2">
                     <Label htmlFor="reconciliation-filter-batch-id">{t('reconciliation.filters.batchId')}</Label>

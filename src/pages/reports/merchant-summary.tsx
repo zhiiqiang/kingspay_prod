@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { format, subDays } from 'date-fns';
+import { format } from 'date-fns';
 import { toast } from 'sonner';
 import { CalendarIcon, Inbox, RefreshCcw, SlidersHorizontal } from 'lucide-react';
 import { ApiAuthError, apiFetch } from '@/lib/api';
@@ -33,7 +33,6 @@ interface MerchantSummaryItem {
   totalAmount?: number;
   totalProfit?: number;
   feeAgent?: number;
-  feePlatform?: number;
   feeChannel?: number;
   netAmount?: number;
 }
@@ -44,7 +43,6 @@ interface MerchantSummaryResponse {
     totalAmount?: number;
     totalProfit?: number;
     feeAgent?: number;
-    feePlatform?: number;
     feeChannel?: number;
     netAmount?: number;
   };
@@ -55,6 +53,26 @@ interface MerchantSummaryResponse {
     limit?: number;
     totalPages?: number;
   };
+}
+
+interface MerchantFilterItem {
+  id: number;
+  name?: string;
+}
+
+interface MerchantFilterListResponse {
+  status: boolean;
+  data?: MerchantFilterItem[];
+}
+
+interface AgentFilterItem {
+  id: number;
+  name?: string;
+}
+
+interface AgentFilterListResponse {
+  status: boolean;
+  data?: AgentFilterItem[] | { data?: AgentFilterItem[] };
 }
 
 interface MerchantSummaryFilters {
@@ -77,7 +95,6 @@ export function MerchantSummaryReportPage() {
     totalAmount: 0,
     totalProfit: 0,
     feeAgent: 0,
-    feePlatform: 0,
     feeChannel: 0,
     netAmount: 0,
   });
@@ -85,12 +102,15 @@ export function MerchantSummaryReportPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isFilterDialogOpen, setIsFilterDialogOpen] = useState(false);
+  const [isLoadingMerchants, setIsLoadingMerchants] = useState(false);
+  const [merchants, setMerchants] = useState<MerchantFilterItem[]>([]);
+  const [agents, setAgents] = useState<AgentFilterItem[]>([]);
 
   const defaultFilter = useMemo(
     () => ({
       idMerchant: '',
       idAgent: '',
-      dateFrom: getDateOnlyString(subDays(new Date(), 1)),
+      dateFrom: getDateOnlyString(new Date()),
       dateTo: getDateOnlyString(new Date()),
     }),
     [],
@@ -133,7 +153,6 @@ export function MerchantSummaryReportPage() {
           totalAmount: response.summary?.totalAmount ?? 0,
           totalProfit: response.summary?.totalProfit ?? 0,
           feeAgent: response.summary?.feeAgent ?? 0,
-          feePlatform: response.summary?.feePlatform ?? 0,
           feeChannel: response.summary?.feeChannel ?? 0,
           netAmount: response.summary?.netAmount ?? 0,
         });
@@ -158,6 +177,33 @@ export function MerchantSummaryReportPage() {
 
   useEffect(() => {
     void fetchMerchantSummary(1, pagination.limit, filters);
+  }, []);
+
+  useEffect(() => {
+    const fetchFilterOptions = async () => {
+      setIsLoadingMerchants(true);
+      try {
+        const [merchantResponse, agentResponse] = await Promise.all([
+          apiFetch<MerchantFilterListResponse>('/merchant?page=1&limit=1000'),
+          apiFetch<AgentFilterListResponse>('user?email=&name=&role=agent&idMerchant=&limit=1000', { method: 'GET' }),
+        ]);
+        setMerchants(Array.isArray(merchantResponse.data) ? merchantResponse.data : []);
+        const agentPayload = agentResponse.data;
+        if (Array.isArray(agentPayload)) {
+          setAgents(agentPayload);
+        } else if (agentPayload && Array.isArray(agentPayload.data)) {
+          setAgents(agentPayload.data);
+        } else {
+          setAgents([]);
+        }
+      } catch {
+        setMerchants([]);
+        setAgents([]);
+      } finally {
+        setIsLoadingMerchants(false);
+      }
+    };
+    void fetchFilterOptions();
   }, []);
 
   const handleDialogOpenChange = useCallback(
@@ -218,7 +264,6 @@ export function MerchantSummaryReportPage() {
       { key: 'totalAmount', label: t('reports.merchantSummary.totalAmount'), value: formatAmount(summary.totalAmount), badge: 'IDR' },
       { key: 'totalProfit', label: t('reports.merchantSummary.totalProfit'), value: formatAmount(summary.totalProfit), badge: 'IDR' },
       { key: 'feeAgent', label: t('reports.merchantSummary.feeAgent'), value: formatAmount(summary.feeAgent), badge: 'IDR' },
-      { key: 'feePlatform', label: t('reports.merchantSummary.feePlatform'), value: formatAmount(summary.feePlatform), badge: 'IDR' },
       { key: 'feeChannel', label: t('reports.merchantSummary.feeChannel'), value: formatAmount(summary.feeChannel), badge: 'IDR' },
       { key: 'netAmount', label: t('reports.merchantSummary.netAmount'), value: formatAmount(summary.netAmount), badge: 'IDR' },
     ],
@@ -263,23 +308,61 @@ export function MerchantSummaryReportPage() {
                     <Label htmlFor="merchant-summary-filter-merchant" className="text-sm font-medium text-muted-foreground">
                       {t('reports.merchantSummary.filters.idMerchant')}
                     </Label>
-                    <Input
-                      id="merchant-summary-filter-merchant"
-                      value={filterDraft.idMerchant}
-                      onChange={(event) => setFilterDraft((prev) => ({ ...prev, idMerchant: event.target.value }))}
-                      placeholder={t('reports.merchantSummary.filters.idMerchantPlaceholder')}
-                    />
+                    <Select
+                      value={filterDraft.idMerchant || 'all'}
+                      onValueChange={(value) =>
+                        setFilterDraft((prev) => ({ ...prev, idMerchant: value === 'all' ? '' : value }))
+                      }
+                      disabled={isLoadingMerchants}
+                    >
+                      <SelectTrigger id="merchant-summary-filter-merchant" className="bg-background">
+                        <SelectValue
+                          placeholder={
+                            isLoadingMerchants
+                              ? t('agents.placeholders.loadingMerchants')
+                              : t('reports.merchantSummary.filters.idMerchantPlaceholder')
+                          }
+                        />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">{t('reports.merchantSummary.filters.idMerchantAll')}</SelectItem>
+                        {merchants.map((merchant) => (
+                          <SelectItem key={merchant.id} value={String(merchant.id)}>
+                            {merchant.id} - {merchant.name ?? '-'}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="merchant-summary-filter-agent" className="text-sm font-medium text-muted-foreground">
                       {t('reports.merchantSummary.filters.idAgent')}
                     </Label>
-                    <Input
-                      id="merchant-summary-filter-agent"
-                      value={filterDraft.idAgent}
-                      onChange={(event) => setFilterDraft((prev) => ({ ...prev, idAgent: event.target.value }))}
-                      placeholder={t('reports.merchantSummary.filters.idAgentPlaceholder')}
-                    />
+                    <Select
+                      value={filterDraft.idAgent || 'all'}
+                      onValueChange={(value) =>
+                        setFilterDraft((prev) => ({ ...prev, idAgent: value === 'all' ? '' : value }))
+                      }
+                      disabled={isLoadingMerchants}
+                    >
+                      <SelectTrigger id="merchant-summary-filter-agent" className="bg-background">
+                        <SelectValue
+                          placeholder={
+                            isLoadingMerchants
+                              ? t('agents.placeholders.loadingMerchants')
+                              : t('reports.merchantSummary.filters.idAgentPlaceholder')
+                          }
+                        />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">{t('reports.merchantSummary.filters.idAgentAll')}</SelectItem>
+                        {agents.map((agent) => (
+                          <SelectItem key={agent.id} value={String(agent.id)}>
+                            {agent.id} - {agent.name ?? '-'}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                   <div className="space-y-2">
                     <Label className="text-sm font-medium text-muted-foreground">{t('reports.merchantSummary.dateFrom')}</Label>
@@ -378,7 +461,6 @@ export function MerchantSummaryReportPage() {
                   <TableHead className="min-w-[150px]">{t('reports.merchantSummary.totalAmount')}</TableHead>
                   <TableHead className="min-w-[150px]">{t('reports.merchantSummary.totalProfit')}</TableHead>
                   <TableHead className="min-w-[140px]">{t('reports.merchantSummary.feeAgent')}</TableHead>
-                  <TableHead className="min-w-[150px]">{t('reports.merchantSummary.feePlatform')}</TableHead>
                   <TableHead className="min-w-[150px]">{t('reports.merchantSummary.feeChannel')}</TableHead>
                   <TableHead className="min-w-[150px]">{t('reports.merchantSummary.netAmount')}</TableHead>
                 </TableRow>
@@ -396,7 +478,6 @@ export function MerchantSummaryReportPage() {
                         t('reports.merchantSummary.totalAmount'),
                         t('reports.merchantSummary.totalProfit'),
                         t('reports.merchantSummary.feeAgent'),
-                        t('reports.merchantSummary.feePlatform'),
                         t('reports.merchantSummary.feeChannel'),
                         t('reports.merchantSummary.netAmount'),
                       ].map((label, cellIndex) => (
@@ -409,7 +490,7 @@ export function MerchantSummaryReportPage() {
 
                 {!isLoading && rows.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={11} className="py-10 text-center text-sm text-muted-foreground">
+                    <TableCell colSpan={10} className="py-10 text-center text-sm text-muted-foreground">
                       <div className="flex flex-col items-center justify-center gap-3">
                         <div className="flex h-14 w-14 items-center justify-center rounded-full bg-muted">
                           <Inbox className="h-7 w-7" aria-hidden />
@@ -431,7 +512,6 @@ export function MerchantSummaryReportPage() {
                       <TableCell data-label={t('reports.merchantSummary.totalAmount')} className="whitespace-nowrap">{formatAmount(item.totalAmount)}</TableCell>
                       <TableCell data-label={t('reports.merchantSummary.totalProfit')} className="whitespace-nowrap">{formatAmount(item.totalProfit)}</TableCell>
                       <TableCell data-label={t('reports.merchantSummary.feeAgent')} className="whitespace-nowrap">{formatAmount(item.feeAgent)}</TableCell>
-                      <TableCell data-label={t('reports.merchantSummary.feePlatform')} className="whitespace-nowrap">{formatAmount(item.feePlatform)}</TableCell>
                       <TableCell data-label={t('reports.merchantSummary.feeChannel')} className="whitespace-nowrap">{formatAmount(item.feeChannel)}</TableCell>
                       <TableCell data-label={t('reports.merchantSummary.netAmount')} className="whitespace-nowrap">{formatAmount(item.netAmount)}</TableCell>
                     </TableRow>

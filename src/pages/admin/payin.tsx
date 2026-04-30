@@ -33,7 +33,7 @@ import { ApiAuthError, apiFetch } from '@/lib/api';
 import { getStoredAuthToken, getStoredUserPermissions } from '@/lib/auth';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
-import { format, subDays } from 'date-fns';
+import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import {
   DropdownMenu,
@@ -87,6 +87,26 @@ interface PayinListResponse {
   };
 }
 
+interface MerchantFilterItem {
+  id: number;
+  name?: string;
+}
+
+interface MerchantFilterListResponse {
+  status: boolean;
+  data?: MerchantFilterItem[];
+}
+
+interface AgentFilterItem {
+  id: number;
+  name?: string;
+}
+
+interface AgentFilterListResponse {
+  status: boolean;
+  data?: AgentFilterItem[] | { data?: AgentFilterItem[] };
+}
+
 const formatAmount = (amount?: number) =>
   typeof amount === 'number' ? amount.toLocaleString('id-ID', { style: 'currency', currency: 'IDR' }) : '-';
 
@@ -128,7 +148,7 @@ const getDateOnlyString = (date: Date) => {
 const getStartOfDayString = (date: Date) => `${getDateOnlyString(date)} 00:00:00`;
 const getEndOfDayString = (date: Date) => `${getDateOnlyString(date)} 23:59:59`;
 /** Default created-date range: yesterday through today (inclusive). */
-const getDefaultCreatedFromDate = () => getDateOnlyString(subDays(new Date(), 1));
+const getDefaultCreatedFromDate = () => getDateOnlyString(new Date());
 
 type PayinColumnId =
   | 'id'
@@ -144,7 +164,6 @@ type PayinColumnId =
   | 'amount'
   | 'rate'
   | 'biayaChannel'
-  | 'biayaPlatform'
   | 'biayaAgent'
   | 'netAmount'
   | 'status'
@@ -196,6 +215,7 @@ interface PayinFiltersProps {
   visibleColumns: Set<PayinColumnId>;
   isRefreshing: boolean;
   isExporting: boolean;
+  canExport: boolean;
   onSearch: (payload: { status: string }) => void;
   onRefresh: () => void;
   onReset: () => void;
@@ -332,11 +352,6 @@ const PayinSummaryCards = memo(function PayinSummaryCards({
         value: formatAmount(summary?.sumBiayaChannel),
       },
       {
-        key: 'platform',
-        label: t('payin.summary.platformFee'),
-        value: formatAmount(summary?.sumBiayaPlatform),
-      },
-      {
         key: 'agent',
         label: t('payin.summary.agentFee'),
         value: formatAmount(summary?.sumBiayaAgent),
@@ -356,7 +371,6 @@ const PayinSummaryCards = memo(function PayinSummaryCards({
       summary?.sumAmount,
       summary?.sumBiayaAgent,
       summary?.sumBiayaChannel,
-      summary?.sumBiayaPlatform,
       summary?.sumNetAmount,
       summary?.sumProfit,
       t,
@@ -413,6 +427,7 @@ const PayinFilters = memo(function PayinFilters({
   visibleColumns,
   isRefreshing,
   isExporting,
+  canExport,
   onSearch,
   onRefresh,
   onReset,
@@ -430,9 +445,46 @@ const PayinFilters = memo(function PayinFilters({
   const { t } = useLanguage();
   const [isFilterDialogOpen, setIsFilterDialogOpen] = useState(false);
   const [statusDraft, setStatusDraft] = useState(status);
+  const [isLoadingMerchants, setIsLoadingMerchants] = useState(false);
+  const [merchants, setMerchants] = useState<MerchantFilterItem[]>([]);
+  const [agents, setAgents] = useState<AgentFilterItem[]>([]);
+  const [idMerchantDraft, setIdMerchantDraft] = useState(idMerchant);
+  const [idAgentDraft, setIdAgentDraft] = useState(idAgent);
+  useEffect(() => {
+    const fetchFilterOptions = async () => {
+      setIsLoadingMerchants(true);
+      try {
+        const [merchantResponse, agentResponse] = await Promise.all([
+          apiFetch<MerchantFilterListResponse>('/merchant?page=1&limit=1000'),
+          apiFetch<AgentFilterListResponse>('user?email=&name=&role=agent&idMerchant=&limit=1000', { method: 'GET' }),
+        ]);
+        setMerchants(Array.isArray(merchantResponse.data) ? merchantResponse.data : []);
+        const agentPayload = agentResponse.data;
+        if (Array.isArray(agentPayload)) {
+          setAgents(agentPayload);
+        } else if (agentPayload && Array.isArray(agentPayload.data)) {
+          setAgents(agentPayload.data);
+        } else {
+          setAgents([]);
+        }
+      } catch {
+        setMerchants([]);
+        setAgents([]);
+      } finally {
+        setIsLoadingMerchants(false);
+      }
+    };
+    void fetchFilterOptions();
+  }, []);
   useEffect(() => {
     setStatusDraft(status);
   }, [status]);
+  useEffect(() => {
+    setIdMerchantDraft(idMerchant);
+  }, [idMerchant]);
+  useEffect(() => {
+    setIdAgentDraft(idAgent);
+  }, [idAgent]);
   const appliedRef = useRef(false);
   const snapshotRef = useRef({
     platformTrxId,
@@ -488,6 +540,8 @@ const PayinFilters = memo(function PayinFilters({
     if (nmidRef.current) nmidRef.current.value = snapshot.nmid;
     if (idMerchantRef.current) idMerchantRef.current.value = snapshot.idMerchant;
     if (idAgentRef.current) idAgentRef.current.value = snapshot.idAgent;
+    setIdMerchantDraft(snapshot.idMerchant);
+    setIdAgentDraft(snapshot.idAgent);
     if (rrnRef.current) rrnRef.current.value = snapshot.rrn;
     if (idSettlementRef.current) idSettlementRef.current.value = snapshot.idSettlement;
     setStatusDraft(snapshot.status);
@@ -516,6 +570,8 @@ const PayinFilters = memo(function PayinFilters({
       if (nextOpen) {
         appliedRef.current = false;
         setStatusDraft(status);
+        setIdMerchantDraft(idMerchantRef.current?.value ?? idMerchant);
+        setIdAgentDraft(idAgentRef.current?.value ?? idAgent);
         snapshotRef.current = {
           platformTrxId: platformTrxIdRef.current?.value ?? platformTrxId,
           merchantTrxId: merchantTrxIdRef.current?.value ?? merchantTrxId,
@@ -668,23 +724,55 @@ const PayinFilters = memo(function PayinFilters({
                 </div>
                 <div className="flex w-full flex-col gap-2">
                   <Label htmlFor="payin-filter-merchant-id">{t('payin.filters.merchantId')}</Label>
-                  <Input
+                  <Input key={`merchant-hidden-${filterResetKey}`} defaultValue={idMerchant} ref={idMerchantRef} className="hidden" />
+                  <Select
                     key={`merchant-${filterResetKey}`}
-                    id="payin-filter-merchant-id"
-                    defaultValue={idMerchant}
-                    ref={idMerchantRef}
-                    placeholder={t('payin.filters.merchantIdPlaceholder')}
-                  />
+                    value={idMerchantDraft || 'all'}
+                    onValueChange={(value) => {
+                      const normalizedValue = value === 'all' ? '' : value;
+                      setIdMerchantDraft(normalizedValue);
+                      if (idMerchantRef.current) idMerchantRef.current.value = normalizedValue;
+                    }}
+                    disabled={isLoadingMerchants}
+                  >
+                    <SelectTrigger id="payin-filter-merchant-id" className="bg-background">
+                      <SelectValue placeholder={t('payin.filters.merchantIdPlaceholder')} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">{t('payin.filters.merchantIdAll')}</SelectItem>
+                      {merchants.map((merchant) => (
+                        <SelectItem key={merchant.id} value={String(merchant.id)}>
+                          {merchant.id} - {merchant.name ?? '-'}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div className="flex w-full flex-col gap-2">
                   <Label htmlFor="payin-filter-agent-id">{t('payin.filters.agentId')}</Label>
-                  <Input
+                  <Input key={`agent-hidden-${filterResetKey}`} defaultValue={idAgent} ref={idAgentRef} className="hidden" />
+                  <Select
                     key={`agent-${filterResetKey}`}
-                    id="payin-filter-agent-id"
-                    defaultValue={idAgent}
-                    ref={idAgentRef}
-                    placeholder={t('payin.filters.agentIdPlaceholder')}
-                  />
+                    value={idAgentDraft || 'all'}
+                    onValueChange={(value) => {
+                      const normalizedValue = value === 'all' ? '' : value;
+                      setIdAgentDraft(normalizedValue);
+                      if (idAgentRef.current) idAgentRef.current.value = normalizedValue;
+                    }}
+                    disabled={isLoadingMerchants}
+                  >
+                    <SelectTrigger id="payin-filter-agent-id" className="bg-background">
+                      <SelectValue placeholder={t('payin.filters.agentIdPlaceholder')} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">{t('payin.filters.agentIdAll')}</SelectItem>
+                      {agents.map((agent) => (
+                        <SelectItem key={agent.id} value={String(agent.id)}>
+                          {agent.id} - {agent.name ?? '-'}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div className="flex w-full flex-col gap-2">
                   <Label htmlFor="payin-filter-status">{t('payin.filters.status')}</Label>
@@ -776,24 +864,26 @@ const PayinFilters = memo(function PayinFilters({
             </DialogFooter>
           </DialogContent>
         </Dialog>
-        <Button
-          className="bg-primary text-white hover:bg-primary/90 active:bg-primary/80 flex items-center gap-2"
-          onClick={onExport}
-          disabled={isExporting}
-          aria-label={t('payin.export.title')}
-        >
-          {isExporting ? (
-            <>
-              <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
-              {t('payin.export.exporting')}
-            </>
-          ) : (
-            <>
-              <Download className="h-4 w-4" aria-hidden />
-              {t('payin.export.title')}
-            </>
-          )}
-        </Button>
+        {canExport && (
+          <Button
+            className="bg-primary text-white hover:bg-primary/90 active:bg-primary/80 flex items-center gap-2"
+            onClick={onExport}
+            disabled={isExporting}
+            aria-label={t('payin.export.title')}
+          >
+            {isExporting ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+                {t('payin.export.exporting')}
+              </>
+            ) : (
+              <>
+                <Download className="h-4 w-4" aria-hidden />
+                {t('payin.export.title')}
+              </>
+            )}
+          </Button>
+        )}
         <Button
           variant="outline"
           onClick={onReset}
@@ -1016,7 +1106,7 @@ export function AdminPayinPage() {
   const [idAgent, setIdAgent] = useState('');
   const [rrn, setRrn] = useState('');
   const [idSettlement, setIdSettlement] = useState('');
-  const [status, setStatus] = useState('all');
+  const [status, setStatus] = useState('success');
   const [createdFromDate, setCreatedFromDate] = useState(getDefaultCreatedFromDate());
   const [createdToDate, setCreatedToDate] = useState(getDateOnlyString(new Date()));
   const [createdFromInput, setCreatedFromInput] = useState(getDefaultCreatedFromDate());
@@ -1050,6 +1140,7 @@ export function AdminPayinPage() {
   const [callbackItem, setCallbackItem] = useState<PayinItem | null>(null);
   const [isCallbackSubmitting, setIsCallbackSubmitting] = useState(false);
   const canResendCallback = useMemo(() => getStoredUserPermissions().includes('trx:resendCallback'), []);
+  const canExport = useMemo(() => getStoredUserPermissions().includes('payin:export'), []);
 
   const handleCallbackOpen = useCallback((item: PayinItem) => {
     setCallbackItem(item);
@@ -1073,7 +1164,7 @@ export function AdminPayinPage() {
     setIdAgent('');
     setRrn('');
     setIdSettlement('');
-    setStatus('all');
+    setStatus('success');
     setCreatedFromDate(defaultFromDate);
     setCreatedToDate(today);
     setCreatedFromInput(defaultFromDate);
@@ -1182,13 +1273,6 @@ export function AdminPayinPage() {
         headerClassName: 'w-[160px] whitespace-nowrap',
         cellClassName: 'whitespace-nowrap',
         render: (payin) => formatAmount(payin.biayaChannel),
-      },
-      {
-        id: 'biayaPlatform',
-        label: t('payin.table.platformFee'),
-        headerClassName: 'w-[160px] whitespace-nowrap',
-        cellClassName: 'whitespace-nowrap',
-        render: (payin) => formatAmount(payin.biayaPlatform),
       },
       {
         id: 'biayaAgent',
@@ -1983,6 +2067,7 @@ export function AdminPayinPage() {
           onReset={handleResetFilters}
           onExport={handleExport}
           isExporting={isExporting}
+          canExport={canExport}
           onDatePickerApply={handleDatePickerApply}
           onDatePickerClose={handleDatePickerClose}
           onSuccessDatePickerApply={handleSuccessDatePickerApply}

@@ -289,6 +289,11 @@ const PERMISSION_GROUPS: PermissionGroup[] = [
         descriptionKey: 'operators.permissions.payin.listDescription',
       },
       {
+        key: 'payin:export',
+        labelKey: 'operators.permissions.payin.export',
+        descriptionKey: 'operators.permissions.payin.exportDescription',
+      },
+      {
         key: 'trx:resendCallback',
         labelKey: 'operators.permissions.transactions.resendCallback',
         descriptionKey: 'operators.permissions.transactions.resendCallbackDescription',
@@ -345,6 +350,31 @@ const PERMISSION_GROUPS: PermissionGroup[] = [
       },
     ],
   },
+  {
+    nameKey: 'operators.permissions.group.bankAccounts',
+    permissions: [
+      {
+        key: 'dataRekening:list',
+        labelKey: 'operators.permissions.dataRekening.list',
+        descriptionKey: 'operators.permissions.dataRekening.listDescription',
+      },
+      {
+        key: 'dataRekening:add',
+        labelKey: 'operators.permissions.dataRekening.add',
+        descriptionKey: 'operators.permissions.dataRekening.addDescription',
+      },
+      {
+        key: 'dataRekening:update',
+        labelKey: 'operators.permissions.dataRekening.update',
+        descriptionKey: 'operators.permissions.dataRekening.updateDescription',
+      },
+      {
+        key: 'dataRekening:delete',
+        labelKey: 'operators.permissions.dataRekening.delete',
+        descriptionKey: 'operators.permissions.dataRekening.deleteDescription',
+      },
+    ],
+  },
 ];
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -391,7 +421,7 @@ export function AdminOperatorPage() {
   const [selectedPermissionSet, setSelectedPermissionSet] = useState<Set<string>>(new Set());
   const [createPermissionSet, setCreatePermissionSet] = useState<Set<string>>(new Set());
   const [permissionOperatorName, setPermissionOperatorName] = useState('');
-  const [currentUserPermissions] = useState(() => new Set(getStoredUserPermissions()));
+  const currentUserPermissions = useMemo(() => new Set(getStoredUserPermissions()), [permissionDialogOpen, operatorDialogOpen]);
   const formatMessage = (key: string, values: Record<string, string | number>) =>
     Object.entries(values).reduce((message, [placeholder, value]) => {
       return message.replace(`{${placeholder}}`, String(value));

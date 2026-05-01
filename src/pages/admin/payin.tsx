@@ -256,8 +256,6 @@ interface DatePickerFieldProps {
   label: string;
   value: string;
   onChange: (value: string) => void;
-  onApply?: (value: string) => void;
-  onClose?: () => void;
 }
 
 const parseDateValue = (value?: string) => {
@@ -272,88 +270,55 @@ const normalizeDateTimeLocalValue = (value?: string) => {
   return parsed ? getDateTimeLocalString(parsed) : '';
 };
 
-function DatePickerField({ label, value, onChange, onApply, onClose }: DatePickerFieldProps) {
+function DatePickerField({ label, value, onChange }: DatePickerFieldProps) {
   const selectedDate = useMemo(() => parseDateValue(value), [value]);
   const [open, setOpen] = useState(false);
-  const didApplyRef = useRef(false);
-  const applyValueRef = useRef<string | null>(null);
   const localValue = normalizeDateTimeLocalValue(value);
+  const timeValue = localValue.split('T')[1] ?? '00:00';
 
   return (
     <div className="flex flex-col gap-2">
       <span className="text-sm font-medium text-muted-foreground">{label}</span>
-      <Popover
-        open={open}
-        onOpenChange={(nextOpen) => {
-          if (nextOpen) {
-            didApplyRef.current = false;
-            applyValueRef.current = null;
-          }
-          setOpen(nextOpen);
-          if (!nextOpen) {
-            const applyValue = applyValueRef.current;
-            if (didApplyRef.current && applyValue) {
-              setTimeout(() => onApply?.(applyValue), 0);
-              return;
-            }
-            setTimeout(() => onClose?.(), 0);
-          }
-        }}
-      >
-        <PopoverTrigger asChild>
-          <Button
-            variant="outline"
-            className={cn(
-              'flex w-full items-center justify-between gap-2 text-left font-normal shadow-sm transition hover:shadow-sm focus-visible:ring-2 focus-visible:ring-offset-2 md:w-[220px]',
-              !selectedDate && 'text-muted-foreground',
-            )}
-          >
-            <span>{selectedDate ? format(selectedDate, 'yyyy-MM-dd HH:mm') : 'yyyy-mm-dd hh:mm'}</span>
-            <CalendarIcon className="h-4 w-4 opacity-70" aria-hidden />
-          </Button>
-        </PopoverTrigger>
-        <PopoverContent className="w-auto p-3 space-y-3" align="end" sideOffset={6}>
-          <Calendar
-            mode="single"
-            selected={selectedDate}
-            onSelect={(nextDate) => {
-              if (!nextDate) return;
-              const currentTime = localValue.split('T')[1] ?? '00:00';
-              const nextValue = `${getDateOnlyString(nextDate)}T${currentTime}`;
-              onChange(nextValue);
-              didApplyRef.current = true;
-              applyValueRef.current = nextValue;
-            }}
-            defaultMonth={selectedDate}
-            initialFocus
-          />
-          <Input
-            type="time"
-            step={60}
-            value={localValue.split('T')[1] ?? '00:00'}
-            onChange={(event) => {
-              const baseDate = selectedDate ? getDateOnlyString(selectedDate) : getDateOnlyString(new Date());
-              const nextValue = `${baseDate}T${event.target.value}`;
-              onChange(nextValue);
-              didApplyRef.current = true;
-              applyValueRef.current = nextValue;
-            }}
-          />
-          <div className="flex justify-end">
+      <div className="flex w-full items-center gap-2 md:w-[320px]">
+        <Popover open={open} onOpenChange={setOpen}>
+          <PopoverTrigger asChild>
             <Button
-              size="sm"
-              onClick={() => {
-                const applyValue = normalizeDateTimeLocalValue(value);
-                applyValueRef.current = applyValue;
-                didApplyRef.current = Boolean(applyValue);
+              variant="outline"
+              className={cn(
+                'flex flex-1 items-center justify-between gap-2 text-left font-normal shadow-sm transition hover:shadow-sm focus-visible:ring-2 focus-visible:ring-offset-2',
+                !selectedDate && 'text-muted-foreground',
+              )}
+            >
+              <span>{selectedDate ? format(selectedDate, 'yyyy-MM-dd') : 'yyyy-mm-dd'}</span>
+              <CalendarIcon className="h-4 w-4 opacity-70" aria-hidden />
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-auto p-0" align="end" sideOffset={6}>
+            <Calendar
+              mode="single"
+              selected={selectedDate}
+              onSelect={(nextDate) => {
+                if (!nextDate) return;
+                const nextValue = `${getDateOnlyString(nextDate)}T${timeValue}`;
+                onChange(nextValue);
                 setOpen(false);
               }}
-            >
-              Apply
-            </Button>
-          </div>
-        </PopoverContent>
-      </Popover>
+              defaultMonth={selectedDate}
+              initialFocus
+            />
+          </PopoverContent>
+        </Popover>
+        <Input
+          type="time"
+          step={60}
+          value={timeValue}
+          onChange={(event) => {
+            const baseDate = selectedDate ? getDateOnlyString(selectedDate) : getDateOnlyString(new Date());
+            onChange(`${baseDate}T${event.target.value}`);
+          }}
+          className="w-[108px]"
+        />
+      </div>
     </div>
   );
 }
@@ -839,15 +804,11 @@ const PayinFilters = memo(function PayinFilters({
                   label={t('payin.filters.createdFrom')}
                   value={createdFromInput}
                   onChange={onCreatedFromChange}
-                  onApply={(value) => onDatePickerApply(value, 'from')}
-                  onClose={onDatePickerClose}
                 />
                 <DatePickerField
                   label={t('payin.filters.createdTo')}
                   value={createdToInput}
                   onChange={onCreatedToChange}
-                  onApply={(value) => onDatePickerApply(value, 'to')}
-                  onClose={onDatePickerClose}
                 />
               </div>
               <div className="grid gap-4 sm:grid-cols-2">
@@ -855,15 +816,11 @@ const PayinFilters = memo(function PayinFilters({
                   label={t('payin.filters.successFrom')}
                   value={successFromInput}
                   onChange={onSuccessFromChange}
-                  onApply={(value) => onSuccessDatePickerApply(value, 'from')}
-                  onClose={onSuccessDatePickerClose}
                 />
                 <DatePickerField
                   label={t('payin.filters.successTo')}
                   value={successToInput}
                   onChange={onSuccessToChange}
-                  onApply={(value) => onSuccessDatePickerApply(value, 'to')}
-                  onClose={onSuccessDatePickerClose}
                 />
               </div>
             </div>

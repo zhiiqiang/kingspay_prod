@@ -160,7 +160,8 @@ const toApiDateTimeString = (value: string, fallbackTime: '00:00' | '23:59') => 
   return `${datePart} ${hour.padStart(2, '0')}:${minute.padStart(2, '0')}:00`;
 };
 
-const getDefaultCreatedFromDate = () => getDateTimeLocalString(new Date());
+const getDefaultCreatedFromDate = () => `${getDateOnlyString(new Date())}T00:00`;
+const getDefaultCreatedToDate = () => `${getDateOnlyString(new Date())}T23:59`;
 
 type PayinColumnId =
   | 'id'
@@ -256,6 +257,7 @@ interface DatePickerFieldProps {
   label: string;
   value: string;
   onChange: (value: string) => void;
+  defaultTime?: string;
 }
 
 const parseDateValue = (value?: string) => {
@@ -270,11 +272,15 @@ const normalizeDateTimeLocalValue = (value?: string) => {
   return parsed ? getDateTimeLocalString(parsed) : '';
 };
 
-function DatePickerField({ label, value, onChange }: DatePickerFieldProps) {
+function DatePickerField({ label, value, onChange, defaultTime = '00:00' }: DatePickerFieldProps) {
   const selectedDate = useMemo(() => parseDateValue(value), [value]);
   const [open, setOpen] = useState(false);
+  const [timeOpen, setTimeOpen] = useState(false);
   const localValue = normalizeDateTimeLocalValue(value);
-  const timeValue = localValue.split('T')[1] ?? '00:00';
+  const timeValue = localValue.split('T')[1] ?? defaultTime;
+  const [draftTime, setDraftTime] = useState(timeValue);
+  const hourOptions = useMemo(() => Array.from({ length: 24 }, (_, index) => String(index).padStart(2, '0')), []);
+  const minuteOptions = useMemo(() => Array.from({ length: 60 }, (_, index) => String(index).padStart(2, '0')), []);
 
   return (
     <div className="flex flex-col gap-2">
@@ -308,16 +314,50 @@ function DatePickerField({ label, value, onChange }: DatePickerFieldProps) {
             />
           </PopoverContent>
         </Popover>
-        <Input
-          type="time"
-          step={60}
-          value={timeValue}
-          onChange={(event) => {
-            const baseDate = selectedDate ? getDateOnlyString(selectedDate) : getDateOnlyString(new Date());
-            onChange(`${baseDate}T${event.target.value}`);
+        <Popover
+          open={timeOpen}
+          onOpenChange={(nextOpen) => {
+            setTimeOpen(nextOpen);
+            if (nextOpen) setDraftTime(timeValue);
           }}
-          className="w-[108px]"
-        />
+        >
+          <PopoverTrigger asChild>
+            <Button variant="outline" className="w-[108px] justify-center font-medium">
+              {timeValue}
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-[220px] p-3" align="end" sideOffset={6}>
+            <div className="space-y-3">
+              <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2">
+                <Select
+                  value={draftTime.split(':')[0]}
+                  onValueChange={(nextHour) => setDraftTime(`${nextHour}:${draftTime.split(':')[1] ?? '00'}`)}
+                >
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>{hourOptions.map((hour) => <SelectItem key={hour} value={hour}>{hour}</SelectItem>)}</SelectContent>
+                </Select>
+                <span className="text-muted-foreground">:</span>
+                <Select
+                  value={draftTime.split(':')[1] ?? '00'}
+                  onValueChange={(nextMinute) => setDraftTime(`${draftTime.split(':')[0] ?? '00'}:${nextMinute}`)}
+                >
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>{minuteOptions.map((minute) => <SelectItem key={minute} value={minute}>{minute}</SelectItem>)}</SelectContent>
+                </Select>
+              </div>
+              <Button
+                className="w-full"
+                onClick={() => {
+                  const baseDate = selectedDate ? getDateOnlyString(selectedDate) : getDateOnlyString(new Date());
+                  onChange(`${baseDate}T${draftTime}`);
+                  setTimeOpen(false);
+                }}
+              >
+                OK
+              </Button>
+            </div>
+          </PopoverContent>
+        </Popover>
       </div>
     </div>
   );
@@ -804,11 +844,13 @@ const PayinFilters = memo(function PayinFilters({
                   label={t('payin.filters.createdFrom')}
                   value={createdFromInput}
                   onChange={onCreatedFromChange}
+                  defaultTime="00:00"
                 />
                 <DatePickerField
                   label={t('payin.filters.createdTo')}
                   value={createdToInput}
                   onChange={onCreatedToChange}
+                  defaultTime="23:59"
                 />
               </div>
               <div className="grid gap-4 sm:grid-cols-2">
@@ -816,11 +858,13 @@ const PayinFilters = memo(function PayinFilters({
                   label={t('payin.filters.successFrom')}
                   value={successFromInput}
                   onChange={onSuccessFromChange}
+                  defaultTime="00:00"
                 />
                 <DatePickerField
                   label={t('payin.filters.successTo')}
                   value={successToInput}
                   onChange={onSuccessToChange}
+                  defaultTime="23:59"
                 />
               </div>
             </div>
@@ -1093,9 +1137,9 @@ export function AdminPayinPage() {
   const [idSettlement, setIdSettlement] = useState('');
   const [status, setStatus] = useState('success');
   const [createdFromDate, setCreatedFromDate] = useState(getDefaultCreatedFromDate());
-  const [createdToDate, setCreatedToDate] = useState(getDateTimeLocalString(new Date()));
+  const [createdToDate, setCreatedToDate] = useState(getDefaultCreatedToDate());
   const [createdFromInput, setCreatedFromInput] = useState(getDefaultCreatedFromDate());
-  const [createdToInput, setCreatedToInput] = useState(getDateTimeLocalString(new Date()));
+  const [createdToInput, setCreatedToInput] = useState(getDefaultCreatedToDate());
   const [successFromDate, setSuccessFromDate] = useState('');
   const [successToDate, setSuccessToDate] = useState('');
   const [successFromInput, setSuccessFromInput] = useState('');
@@ -1138,7 +1182,7 @@ export function AdminPayinPage() {
   }, []);
 
   const resetFilters = useCallback(() => {
-    const today = getDateTimeLocalString(new Date());
+    const today = getDefaultCreatedToDate();
     const defaultFromDate = getDefaultCreatedFromDate();
     setPlatformTrxId('');
     setMerchantTrxId('');

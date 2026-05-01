@@ -28,12 +28,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { CalendarIcon, CheckCircle2, Filter, Inbox, Info, RefreshCcw, SlidersHorizontal, Download, Loader2 } from 'lucide-react';
+import { CheckCircle2, Filter, Inbox, Info, RefreshCcw, SlidersHorizontal, Download, Loader2 } from 'lucide-react';
 import { ApiAuthError, apiFetch } from '@/lib/api';
 import { getStoredAuthToken, getStoredUserPermissions } from '@/lib/auth';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Calendar } from '@/components/ui/calendar';
-import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import {
   DropdownMenu,
@@ -145,10 +142,22 @@ const getDateOnlyString = (date: Date) => {
   return `${year}-${month}-${day}`;
 };
 
-const getStartOfDayString = (date: Date) => `${getDateOnlyString(date)} 00:00:00`;
-const getEndOfDayString = (date: Date) => `${getDateOnlyString(date)} 23:59:59`;
-/** Default created-date range: yesterday through today (inclusive). */
-const getDefaultCreatedFromDate = () => getDateOnlyString(new Date());
+const getDateTimeLocalString = (date: Date) => {
+  const dateOnly = getDateOnlyString(date);
+  const hours = String(date.getHours()).padStart(2, '0');
+  const minutes = String(date.getMinutes()).padStart(2, '0');
+  return `${dateOnly}T${hours}:${minutes}`;
+};
+
+const toApiDateTimeString = (value: string, fallbackTime: '00:00' | '23:59') => {
+  const trimmed = value.trim();
+  if (!trimmed) return '';
+  const [datePart, timePart = fallbackTime] = trimmed.replace(' ', 'T').split('T');
+  const [hour = '00', minute = '00'] = timePart.split(':');
+  return `${datePart} ${hour.padStart(2, '0')}:${minute.padStart(2, '0')}:00`;
+};
+
+const getDefaultCreatedFromDate = () => getDateTimeLocalString(new Date());
 
 type PayinColumnId =
   | 'id'
@@ -255,77 +264,23 @@ const parseDateValue = (value?: string) => {
 };
 
 function DatePickerField({ label, value, onChange, onApply, onClose }: DatePickerFieldProps) {
-  const selectedDate = useMemo(() => parseDateValue(value), [value]);
-  const [open, setOpen] = useState(false);
-  const didApplyRef = useRef(false);
-  const applyValueRef = useRef<string | null>(null);
-
   return (
     <div className="flex flex-col gap-2">
       <span className="text-sm font-medium text-muted-foreground">{label}</span>
-      <Popover
-        open={open}
-        onOpenChange={(nextOpen) => {
-          if (nextOpen) {
-            didApplyRef.current = false;
-            applyValueRef.current = null;
-          }
-          setOpen(nextOpen);
-          if (!nextOpen) {
-            const applyValue = applyValueRef.current;
-            if (didApplyRef.current && applyValue) {
-              setTimeout(() => onApply?.(applyValue), 0);
-              return;
-            }
-            setTimeout(() => onClose?.(), 0);
+      <Input
+        type="datetime-local"
+        step={60}
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        onBlur={() => onApply?.(value)}
+        onKeyDown={(event) => {
+          if (event.key === 'Enter') {
+            onApply?.(value);
+            onClose?.();
           }
         }}
-      >
-        <PopoverTrigger asChild>
-          <Button
-            variant="outline"
-            className={cn(
-              'flex w-full items-center justify-between gap-2 text-left font-normal shadow-sm transition hover:shadow-sm focus-visible:ring-2 focus-visible:ring-offset-2 md:w-[220px]',
-              !selectedDate && 'text-muted-foreground',
-            )}
-          >
-            <span>{selectedDate ? format(selectedDate, 'yyyy-MM-dd') : 'yyyy-mm-dd'}</span>
-            <CalendarIcon className="h-4 w-4 opacity-70" aria-hidden />
-          </Button>
-        </PopoverTrigger>
-        <PopoverContent className="w-auto p-0" align="end" sideOffset={6}>
-          <Calendar
-            mode="single"
-            selected={selectedDate}
-            onSelect={(nextDate) => {
-              if (nextDate) {
-                const nextValue = getDateOnlyString(nextDate);
-                onChange(nextValue);
-                didApplyRef.current = true;
-                applyValueRef.current = nextValue;
-                setOpen(false);
-                return;
-              }
-
-              // Close the picker even if the same date is clicked again.
-              if (!nextDate && selectedDate) {
-                const nextValue = getDateOnlyString(selectedDate);
-                onChange(nextValue);
-                didApplyRef.current = true;
-                applyValueRef.current = nextValue;
-                setOpen(false);
-                return;
-              }
-
-              if (nextDate || selectedDate) {
-                setOpen(false);
-              }
-            }}
-            defaultMonth={selectedDate}
-            initialFocus
-          />
-        </PopoverContent>
-      </Popover>
+        className={cn('w-full shadow-sm transition hover:shadow-sm focus-visible:ring-2 focus-visible:ring-offset-2 md:w-[220px]')}
+      />
     </div>
   );
 }
@@ -1108,9 +1063,9 @@ export function AdminPayinPage() {
   const [idSettlement, setIdSettlement] = useState('');
   const [status, setStatus] = useState('success');
   const [createdFromDate, setCreatedFromDate] = useState(getDefaultCreatedFromDate());
-  const [createdToDate, setCreatedToDate] = useState(getDateOnlyString(new Date()));
+  const [createdToDate, setCreatedToDate] = useState(getDateTimeLocalString(new Date()));
   const [createdFromInput, setCreatedFromInput] = useState(getDefaultCreatedFromDate());
-  const [createdToInput, setCreatedToInput] = useState(getDateOnlyString(new Date()));
+  const [createdToInput, setCreatedToInput] = useState(getDateTimeLocalString(new Date()));
   const [successFromDate, setSuccessFromDate] = useState('');
   const [successToDate, setSuccessToDate] = useState('');
   const [successFromInput, setSuccessFromInput] = useState('');
@@ -1153,7 +1108,7 @@ export function AdminPayinPage() {
   }, []);
 
   const resetFilters = useCallback(() => {
-    const today = getDateOnlyString(new Date());
+    const today = getDateTimeLocalString(new Date());
     const defaultFromDate = getDefaultCreatedFromDate();
     setPlatformTrxId('');
     setMerchantTrxId('');
@@ -1469,12 +1424,12 @@ export function AdminPayinPage() {
             ...(nextRrn.trim() ? { rrn: nextRrn.trim() } : {}),
             ...(nextIdSettlement.trim() ? { idSettlement: nextIdSettlement.trim() } : {}),
             ...(nextStatus !== 'all' ? { status: nextStatus } : {}),
-            createdFrom: getStartOfDayString(new Date(nextCreatedFromDate)),
-            createdTo: getEndOfDayString(new Date(nextCreatedToDate)),
+            createdFrom: toApiDateTimeString(nextCreatedFromDate, '00:00'),
+            createdTo: toApiDateTimeString(nextCreatedToDate, '23:59'),
             ...(nextSuccessFromDate.trim()
-              ? { successFrom: getStartOfDayString(new Date(nextSuccessFromDate)) }
+              ? { successFrom: toApiDateTimeString(nextSuccessFromDate, '00:00') }
               : {}),
-            ...(nextSuccessToDate.trim() ? { successTo: getEndOfDayString(new Date(nextSuccessToDate)) } : {}),
+            ...(nextSuccessToDate.trim() ? { successTo: toApiDateTimeString(nextSuccessToDate, '23:59') } : {}),
           },
           signal: activeController.signal,
         });
@@ -1553,12 +1508,12 @@ export function AdminPayinPage() {
           ...(rrn.trim() ? { rrn: rrn.trim() } : {}),
           ...(idSettlement.trim() ? { idSettlement: idSettlement.trim() } : {}),
           ...(status !== 'all' ? { status } : {}),
-          createdFrom: getStartOfDayString(new Date(createdFromDate)),
-          createdTo: getEndOfDayString(new Date(createdToDate)),
+          createdFrom: toApiDateTimeString(createdFromDate, '00:00'),
+          createdTo: toApiDateTimeString(createdToDate, '23:59'),
           ...(successFromDate.trim()
-            ? { successFrom: getStartOfDayString(new Date(successFromDate)) }
+            ? { successFrom: toApiDateTimeString(successFromDate, '00:00') }
             : {}),
-          ...(successToDate.trim() ? { successTo: getEndOfDayString(new Date(successToDate)) } : {}),
+          ...(successToDate.trim() ? { successTo: toApiDateTimeString(successToDate, '23:59') } : {}),
         }),
       });
 

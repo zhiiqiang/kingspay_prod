@@ -39,6 +39,9 @@ interface ReconciliationItem {
   merchant_name?: string;
   trx_count?: number;
   total_amount?: number;
+  final_amount?: number;
+  profit_agent?: number;
+  profit_pg?: number;
   status?: string;
   settlement_id?: string;
   approved_by?: string;
@@ -67,6 +70,9 @@ type ReconciliationColumnId =
   | 'merchant'
   | 'trx_count'
   | 'total_amount'
+  | 'final_amount'
+  | 'profit_agent'
+  | 'profit_pg'
   | 'status'
   | 'settlement_id'
   | 'approved_by'
@@ -332,6 +338,27 @@ export function ReconciliationListPage() {
         headerClassName: 'w-[160px] whitespace-nowrap',
         cellClassName: 'whitespace-nowrap',
         render: (item) => formatAmount(item.total_amount),
+      },
+      {
+        id: 'final_amount',
+        label: t('reconciliation.table.finalAmount'),
+        headerClassName: 'w-[160px] whitespace-nowrap',
+        cellClassName: 'whitespace-nowrap',
+        render: (item) => formatAmount(item.final_amount),
+      },
+      {
+        id: 'profit_agent',
+        label: t('reconciliation.table.profitAgent'),
+        headerClassName: 'w-[160px] whitespace-nowrap',
+        cellClassName: 'whitespace-nowrap',
+        render: (item) => formatAmount(item.profit_agent),
+      },
+      {
+        id: 'profit_pg',
+        label: t('reconciliation.table.profitPg'),
+        headerClassName: 'w-[160px] whitespace-nowrap',
+        cellClassName: 'whitespace-nowrap',
+        render: (item) => formatAmount(item.profit_pg),
       },
       {
         id: 'status',

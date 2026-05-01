@@ -28,9 +28,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { CheckCircle2, Filter, Inbox, Info, RefreshCcw, SlidersHorizontal, Download, Loader2 } from 'lucide-react';
+import { CalendarIcon, CheckCircle2, Filter, Inbox, Info, RefreshCcw, SlidersHorizontal, Download, Loader2 } from 'lucide-react';
 import { ApiAuthError, apiFetch } from '@/lib/api';
 import { getStoredAuthToken, getStoredUserPermissions } from '@/lib/auth';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
+import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import {
   DropdownMenu,
@@ -259,28 +262,98 @@ interface DatePickerFieldProps {
 
 const parseDateValue = (value?: string) => {
   if (!value) return undefined;
-  const parsed = new Date(value);
+  const parsed = new Date(value.replace(' ', 'T'));
   return Number.isNaN(parsed.getTime()) ? undefined : parsed;
 };
 
+const normalizeDateTimeLocalValue = (value?: string) => {
+  if (!value) return '';
+  const parsed = parseDateValue(value);
+  return parsed ? getDateTimeLocalString(parsed) : '';
+};
+
 function DatePickerField({ label, value, onChange, onApply, onClose }: DatePickerFieldProps) {
+  const selectedDate = useMemo(() => parseDateValue(value), [value]);
+  const [open, setOpen] = useState(false);
+  const didApplyRef = useRef(false);
+  const applyValueRef = useRef<string | null>(null);
+  const localValue = normalizeDateTimeLocalValue(value);
+
   return (
     <div className="flex flex-col gap-2">
       <span className="text-sm font-medium text-muted-foreground">{label}</span>
-      <Input
-        type="datetime-local"
-        step={60}
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
-        onBlur={() => onApply?.(value)}
-        onKeyDown={(event) => {
-          if (event.key === 'Enter') {
-            onApply?.(value);
-            onClose?.();
+      <Popover
+        open={open}
+        onOpenChange={(nextOpen) => {
+          if (nextOpen) {
+            didApplyRef.current = false;
+            applyValueRef.current = null;
+          }
+          setOpen(nextOpen);
+          if (!nextOpen) {
+            const applyValue = applyValueRef.current;
+            if (didApplyRef.current && applyValue) {
+              setTimeout(() => onApply?.(applyValue), 0);
+              return;
+            }
+            setTimeout(() => onClose?.(), 0);
           }
         }}
-        className={cn('w-full shadow-sm transition hover:shadow-sm focus-visible:ring-2 focus-visible:ring-offset-2 md:w-[220px]')}
-      />
+      >
+        <PopoverTrigger asChild>
+          <Button
+            variant="outline"
+            className={cn(
+              'flex w-full items-center justify-between gap-2 text-left font-normal shadow-sm transition hover:shadow-sm focus-visible:ring-2 focus-visible:ring-offset-2 md:w-[220px]',
+              !selectedDate && 'text-muted-foreground',
+            )}
+          >
+            <span>{selectedDate ? format(selectedDate, 'yyyy-MM-dd HH:mm') : 'yyyy-mm-dd hh:mm'}</span>
+            <CalendarIcon className="h-4 w-4 opacity-70" aria-hidden />
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-auto p-3 space-y-3" align="end" sideOffset={6}>
+          <Calendar
+            mode="single"
+            selected={selectedDate}
+            onSelect={(nextDate) => {
+              if (!nextDate) return;
+              const currentTime = localValue.split('T')[1] ?? '00:00';
+              const nextValue = `${getDateOnlyString(nextDate)}T${currentTime}`;
+              onChange(nextValue);
+              didApplyRef.current = true;
+              applyValueRef.current = nextValue;
+            }}
+            defaultMonth={selectedDate}
+            initialFocus
+          />
+          <Input
+            type="time"
+            step={60}
+            value={localValue.split('T')[1] ?? '00:00'}
+            onChange={(event) => {
+              const baseDate = selectedDate ? getDateOnlyString(selectedDate) : getDateOnlyString(new Date());
+              const nextValue = `${baseDate}T${event.target.value}`;
+              onChange(nextValue);
+              didApplyRef.current = true;
+              applyValueRef.current = nextValue;
+            }}
+          />
+          <div className="flex justify-end">
+            <Button
+              size="sm"
+              onClick={() => {
+                const applyValue = normalizeDateTimeLocalValue(value);
+                applyValueRef.current = applyValue;
+                didApplyRef.current = Boolean(applyValue);
+                setOpen(false);
+              }}
+            >
+              Apply
+            </Button>
+          </div>
+        </PopoverContent>
+      </Popover>
     </div>
   );
 }

@@ -134,6 +134,25 @@ function SelectContent({
   }, [isSearchControlled, searchValue]);
 
   const resolvedSearchValue = isSearchControlled ? searchValue : internalSearchValue;
+  const normalizedQuery = resolvedSearchValue.trim().toLowerCase();
+
+  const getNodeText = (node: ReactNode): string => {
+    if (typeof node === 'string' || typeof node === 'number') return String(node);
+    if (Array.isArray(node)) return node.map(getNodeText).join(' ');
+    if (isValidElement(node)) return getNodeText(node.props.children);
+    return '';
+  };
+
+  const filteredChildren = React.useMemo(() => {
+    if (!searchable || !normalizedQuery) return children;
+
+    const childList = React.Children.toArray(children);
+    return childList.filter((child) => {
+      if (!isValidElement(child)) return true;
+      const optionText = getNodeText(child.props.children).toLowerCase();
+      return optionText.includes(normalizedQuery);
+    });
+  }, [children, normalizedQuery, searchable]);
 
   return (
     <SelectPrimitive.Portal>
@@ -177,7 +196,7 @@ function SelectContent({
               'h-[var(--radix-select-trigger-height)] w-full min-w-[var(--radix-select-trigger-width)]',
           )}
         >
-          {children}
+          {filteredChildren}
         </SelectPrimitive.Viewport>
         <SelectScrollDownButton />
       </SelectPrimitive.Content>

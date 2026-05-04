@@ -1266,6 +1266,10 @@ export function AdminPayinPage() {
   const [successToInput, setSuccessToInput] = useState('');
   const [successFromTimeInput, setSuccessFromTimeInput] = useState('00:00:00');
   const [successToTimeInput, setSuccessToTimeInput] = useState('23:59:59');
+  const createdFromTimeRef = useRef(createdFromTimeInput);
+  const createdToTimeRef = useRef(createdToTimeInput);
+  const successFromTimeRef = useRef(successFromTimeInput);
+  const successToTimeRef = useRef(successToTimeInput);
   const [totalPages, setTotalPages] = useState(1);
   const [totalItems, setTotalItems] = useState<number | undefined>(0);
   const [isLoading, setIsLoading] = useState(false);
@@ -1284,7 +1288,7 @@ export function AdminPayinPage() {
   const rrnRef = useRef<HTMLInputElement | null>(null);
   const idSettlementRef = useRef<HTMLInputElement | null>(null);
   const skipAutoFetchRef = useRef(false);
-  const [hasSearched, setHasSearched] = useState(false);
+  const [hasSearched, setHasSearched] = useState(true);
   const isTableBusy = isLoading || isPending;
   const tableWrapperRef = useRef<HTMLDivElement | null>(null);
   const [isActionColumnStuck, setIsActionColumnStuck] = useState(false);
@@ -1330,7 +1334,7 @@ export function AdminPayinPage() {
     setSuccessFromTimeInput('00:00:00');
     setSuccessToTimeInput('23:59:59');
     setPage(1);
-    setHasSearched(false);
+    setHasSearched(true);
   }, []);
 
   const handleResetFilters = useCallback(() => {
@@ -1508,7 +1512,7 @@ export function AdminPayinPage() {
           isActionColumnStuck && 'border-l border-border',
         ),
         render: (payin) => (
-          <div className="flex w-full items-center justify-end sm:justify-center">
+          <div className="flex w-full items-center justify-start sm:justify-center">
             {canResendCallback && !['pending', 'failed'].includes(payin.status?.toLowerCase() ?? '') && (
               <Button
                 size="sm"
@@ -1626,13 +1630,13 @@ export function AdminPayinPage() {
             ...(nextRrn.trim() ? { rrn: nextRrn.trim() } : {}),
             ...(nextIdSettlement.trim() ? { idSettlement: nextIdSettlement.trim() } : {}),
             ...(nextStatus !== 'all' ? { status: nextStatus } : {}),
-            createdFrom: getDateTimeString(new Date(nextCreatedFromDate), createdFromTimeInput, '00:00:00'),
-            createdTo: getDateTimeString(new Date(nextCreatedToDate), createdToTimeInput, '23:59:59'),
+            createdFrom: getDateTimeString(new Date(nextCreatedFromDate), createdFromTimeRef.current, '00:00:00'),
+            createdTo: getDateTimeString(new Date(nextCreatedToDate), createdToTimeRef.current, '23:59:59'),
             ...(nextSuccessFromDate.trim()
-              ? { successFrom: getDateTimeString(new Date(nextSuccessFromDate), successFromTimeInput, '00:00:00') }
+              ? { successFrom: getDateTimeString(new Date(nextSuccessFromDate), successFromTimeRef.current, '00:00:00') }
               : {}),
             ...(nextSuccessToDate.trim()
-              ? { successTo: getDateTimeString(new Date(nextSuccessToDate), successToTimeInput, '23:59:59') }
+              ? { successTo: getDateTimeString(new Date(nextSuccessToDate), successToTimeRef.current, '23:59:59') }
               : {}),
           },
           signal: activeController.signal,
@@ -1676,10 +1680,6 @@ export function AdminPayinPage() {
       status,
       successFromDate,
       successToDate,
-      createdFromTimeInput,
-      createdToTimeInput,
-      successFromTimeInput,
-      successToTimeInput,
     ],
   );
 
@@ -2012,6 +2012,13 @@ export function AdminPayinPage() {
     setSuccessFromInput(successFromDate);
     setSuccessToInput(successToDate);
   }, [successFromDate, successToDate]);
+
+  useEffect(() => {
+    createdFromTimeRef.current = createdFromTimeInput;
+    createdToTimeRef.current = createdToTimeInput;
+    successFromTimeRef.current = successFromTimeInput;
+    successToTimeRef.current = successToTimeInput;
+  }, [createdFromTimeInput, createdToTimeInput, successFromTimeInput, successToTimeInput]);
 
   useEffect(() => {
     const startDate = parseDateValue(createdFromDate);

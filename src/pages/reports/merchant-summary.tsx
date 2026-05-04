@@ -102,6 +102,8 @@ export function MerchantSummaryReportPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isFilterDialogOpen, setIsFilterDialogOpen] = useState(false);
+  const [isDateFromPopoverOpen, setIsDateFromPopoverOpen] = useState(false);
+  const [isDateToPopoverOpen, setIsDateToPopoverOpen] = useState(false);
   const [isLoadingMerchants, setIsLoadingMerchants] = useState(false);
   const [merchants, setMerchants] = useState<MerchantFilterItem[]>([]);
   const [agents, setAgents] = useState<AgentFilterItem[]>([]);
@@ -366,7 +368,7 @@ export function MerchantSummaryReportPage() {
                   </div>
                   <div className="space-y-2">
                     <Label className="text-sm font-medium text-muted-foreground">{t('reports.merchantSummary.dateFrom')}</Label>
-                    <Popover>
+                    <Popover open={isDateFromPopoverOpen} onOpenChange={setIsDateFromPopoverOpen}>
                       <PopoverTrigger asChild>
                         <Button variant="outline" className="w-full justify-between bg-background font-normal">
                           <span>{filterDraft.dateFrom}</span>
@@ -380,6 +382,7 @@ export function MerchantSummaryReportPage() {
                           onSelect={(date) => {
                             if (date) {
                               setFilterDraft((prev) => ({ ...prev, dateFrom: getDateOnlyString(date) }));
+                              setIsDateFromPopoverOpen(false);
                             }
                           }}
                           disabled={(date) => date > new Date()}
@@ -389,7 +392,7 @@ export function MerchantSummaryReportPage() {
                   </div>
                   <div className="space-y-2">
                     <Label className="text-sm font-medium text-muted-foreground">{t('reports.merchantSummary.dateTo')}</Label>
-                    <Popover>
+                    <Popover open={isDateToPopoverOpen} onOpenChange={setIsDateToPopoverOpen}>
                       <PopoverTrigger asChild>
                         <Button variant="outline" className="w-full justify-between bg-background font-normal">
                           <span>{filterDraft.dateTo}</span>
@@ -403,6 +406,7 @@ export function MerchantSummaryReportPage() {
                           onSelect={(date) => {
                             if (date) {
                               setFilterDraft((prev) => ({ ...prev, dateTo: getDateOnlyString(date) }));
+                              setIsDateToPopoverOpen(false);
                             }
                           }}
                           disabled={(date) => date > new Date()}

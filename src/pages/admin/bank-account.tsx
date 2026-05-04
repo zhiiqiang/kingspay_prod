@@ -376,6 +376,9 @@ export function AdminBankAccountPage() {
                     <Select
                       value={createForm.bankCode}
                       onValueChange={(value) => setCreateForm((prev) => ({ ...prev, bankCode: value }))}
+                      onOpenChange={(open) => {
+                        if (open) setCreateBankSearch('');
+                      }}
                       disabled={isBankOptionsLoading}
                     >
                       <SelectTrigger id="bank-account-bank-code" className="w-full max-w-full min-w-0">
@@ -575,6 +578,9 @@ export function AdminBankAccountPage() {
                   <Select
                     value={editForm.bankCode}
                     onValueChange={(value) => setEditForm((prev) => ({ ...prev, bankCode: value }))}
+                    onOpenChange={(open) => {
+                      if (open) setEditBankSearch('');
+                    }}
                     disabled={isBankOptionsLoading}
                   >
                     <SelectTrigger id="bank-account-edit-bank-code" className="w-full max-w-full min-w-0">

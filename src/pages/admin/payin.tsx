@@ -34,6 +34,7 @@ import { getStoredAuthToken, getStoredUserPermissions } from '@/lib/auth';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { format } from 'date-fns';
+import TimePicker from 'react-time-picker';
 import { cn } from '@/lib/utils';
 import {
   DropdownMenu,
@@ -248,6 +249,11 @@ interface DatePickerFieldProps {
   onClose?: () => void;
 }
 
+interface TimePickerFieldProps {
+  label: string;
+  value: string;
+}
+
 const parseDateValue = (value?: string) => {
   if (!value) return undefined;
   const parsed = new Date(value);
@@ -326,6 +332,15 @@ function DatePickerField({ label, value, onChange, onApply, onClose }: DatePicke
           />
         </PopoverContent>
       </Popover>
+    </div>
+  );
+}
+
+function TimePickerField({ label, value }: TimePickerFieldProps) {
+  return (
+    <div className="flex flex-col gap-2">
+      <span className="text-sm font-medium text-muted-foreground">{label}</span>
+      <TimePicker value={value} disableClock clearIcon={null} format="HH:mm" className="w-full md:w-[140px]" disabled />
     </div>
   );
 }
@@ -807,20 +822,26 @@ const PayinFilters = memo(function PayinFilters({
               </div>
               <Separator />
               <div className="grid gap-4 sm:grid-cols-2">
-                <DatePickerField
-                  label={t('payin.filters.createdFrom')}
-                  value={createdFromInput}
-                  onChange={onCreatedFromChange}
-                  onApply={(value) => onDatePickerApply(value, 'from')}
-                  onClose={onDatePickerClose}
-                />
-                <DatePickerField
-                  label={t('payin.filters.createdTo')}
-                  value={createdToInput}
-                  onChange={onCreatedToChange}
-                  onApply={(value) => onDatePickerApply(value, 'to')}
-                  onClose={onDatePickerClose}
-                />
+                <div className="flex w-full items-end gap-2">
+                  <DatePickerField
+                    label={t('payin.filters.createdFrom')}
+                    value={createdFromInput}
+                    onChange={onCreatedFromChange}
+                    onApply={(value) => onDatePickerApply(value, 'from')}
+                    onClose={onDatePickerClose}
+                  />
+                  <TimePickerField label={t('payin.filters.createdFrom')} value="00:00" />
+                </div>
+                <div className="flex w-full items-end gap-2">
+                  <DatePickerField
+                    label={t('payin.filters.createdTo')}
+                    value={createdToInput}
+                    onChange={onCreatedToChange}
+                    onApply={(value) => onDatePickerApply(value, 'to')}
+                    onClose={onDatePickerClose}
+                  />
+                  <TimePickerField label={t('payin.filters.createdTo')} value="23:59" />
+                </div>
               </div>
               <div className="grid gap-4 sm:grid-cols-2">
                 <DatePickerField

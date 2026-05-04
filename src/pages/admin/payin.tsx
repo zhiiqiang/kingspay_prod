@@ -28,7 +28,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { CalendarIcon, CheckCircle2, Filter, Inbox, Info, RefreshCcw, SlidersHorizontal, Download, Loader2 } from 'lucide-react';
+import { CalendarIcon, CheckCircle2, ChevronDown, Clock3, Filter, Inbox, Info, RefreshCcw, SlidersHorizontal, Download, Loader2 } from 'lucide-react';
 import { ApiAuthError, apiFetch } from '@/lib/api';
 import { getStoredAuthToken, getStoredUserPermissions } from '@/lib/auth';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -256,6 +256,12 @@ interface DatePickerFieldProps {
   onClose?: () => void;
 }
 
+interface TimePickerFieldProps {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+}
+
 const parseDateValue = (value?: string) => {
   if (!value) return undefined;
   const parsed = new Date(value);
@@ -332,6 +338,63 @@ function DatePickerField({ label, value, onChange, onApply, onClose }: DatePicke
             defaultMonth={selectedDate}
             initialFocus
           />
+        </PopoverContent>
+      </Popover>
+    </div>
+  );
+}
+
+function TimePickerField({ label, value, onChange }: TimePickerFieldProps) {
+  const [open, setOpen] = useState(false);
+  const options = useMemo(
+    () =>
+      Array.from({ length: 24 * 4 }, (_, index) => {
+        const hours = String(Math.floor(index / 4)).padStart(2, '0');
+        const minutes = String((index % 4) * 15).padStart(2, '0');
+        return `${hours}:${minutes}`;
+      }),
+    [],
+  );
+
+  return (
+    <div className="flex min-w-[130px] flex-col gap-2">
+      <span className="text-sm font-medium text-muted-foreground">{label}</span>
+      <Popover open={open} onOpenChange={setOpen}>
+        <PopoverTrigger asChild>
+          <Button
+            variant="outline"
+            className="h-10 w-full justify-between border-yellow-300 bg-yellow-50 px-3 text-xs font-medium text-yellow-900 hover:bg-yellow-100"
+            onMouseEnter={() => setOpen(true)}
+            onClick={() => setOpen(true)}
+          >
+            <span className="flex items-center gap-2">
+              <Clock3 className="h-3.5 w-3.5" />
+              {value}
+            </span>
+            <ChevronDown className="h-3.5 w-3.5 opacity-80" />
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-[130px] border-yellow-200 bg-yellow-50 p-1" align="end" sideOffset={6}>
+          <div className="max-h-56 space-y-1 overflow-y-auto pr-1">
+            {options.map((time) => (
+              <Button
+                key={time}
+                type="button"
+                variant="ghost"
+                onClick={() => {
+                  onChange(time);
+                  setOpen(false);
+                }}
+                className={cn(
+                  'h-7 w-full justify-start gap-1.5 px-2 text-[11px] text-yellow-900 hover:bg-yellow-200/80',
+                  value === time && 'bg-yellow-200 font-semibold',
+                )}
+              >
+                <Clock3 className="h-3 w-3" />
+                {time}
+              </Button>
+            ))}
+          </div>
         </PopoverContent>
       </Popover>
     </div>
@@ -829,39 +892,25 @@ const PayinFilters = memo(function PayinFilters({
               </div>
               <Separator />
               <div className="grid gap-4 sm:grid-cols-2">
-                <DatePickerField
-                  label={t('payin.filters.createdFrom')}
-                  value={createdFromInput}
-                  onChange={onCreatedFromChange}
-                  onApply={(value) => onDatePickerApply(value, 'from')}
-                  onClose={onDatePickerClose}
-                />
-                <DatePickerField
-                  label={t('payin.filters.createdTo')}
-                  value={createdToInput}
-                  onChange={onCreatedToChange}
-                  onApply={(value) => onDatePickerApply(value, 'to')}
-                  onClose={onDatePickerClose}
-                />
-              </div>
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div className="flex w-full flex-col gap-2">
-                  <Label htmlFor="payin-filter-created-from-time">From Time</Label>
-                  <Input
-                    id="payin-filter-created-from-time"
-                    type="time"
-                    value={createdFromTimeInput}
-                    onChange={(event) => onCreatedFromTimeChange(event.target.value)}
+                <div className="flex items-end gap-2">
+                  <DatePickerField
+                    label={t('payin.filters.createdFrom')}
+                    value={createdFromInput}
+                    onChange={onCreatedFromChange}
+                    onApply={(value) => onDatePickerApply(value, 'from')}
+                    onClose={onDatePickerClose}
                   />
+                  <TimePickerField label="From Time" value={createdFromTimeInput} onChange={onCreatedFromTimeChange} />
                 </div>
-                <div className="flex w-full flex-col gap-2">
-                  <Label htmlFor="payin-filter-created-to-time">To Time</Label>
-                  <Input
-                    id="payin-filter-created-to-time"
-                    type="time"
-                    value={createdToTimeInput}
-                    onChange={(event) => onCreatedToTimeChange(event.target.value)}
+                <div className="flex items-end gap-2">
+                  <DatePickerField
+                    label={t('payin.filters.createdTo')}
+                    value={createdToInput}
+                    onChange={onCreatedToChange}
+                    onApply={(value) => onDatePickerApply(value, 'to')}
+                    onClose={onDatePickerClose}
                   />
+                  <TimePickerField label="To Time" value={createdToTimeInput} onChange={onCreatedToTimeChange} />
                 </div>
               </div>
               <div className="grid gap-4 sm:grid-cols-2">

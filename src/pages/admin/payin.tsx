@@ -967,7 +967,7 @@ const PayinTable = memo(function PayinTable({
             <TableRow>
               <TableCell
                 colSpan={Math.max(visibleColumnConfigs.length, 1)}
-                className="py-10 text-center text-sm text-muted-foreground"
+                className="py-10 text-center text-sm text-muted-foreground max-sm:block max-sm:px-4 max-sm:text-center"
               >
                 <div className="flex flex-col items-center justify-center gap-3">
                   <div className="flex h-14 w-14 items-center justify-center rounded-full bg-muted">

@@ -35,6 +35,8 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Calendar } from '@/components/ui/calendar';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
+import { ConfigProvider, TimePicker } from 'antd';
+import dayjs from 'dayjs';
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -275,10 +277,8 @@ const normalizeDateTimeLocalValue = (value?: string) => {
 function DatePickerField({ label, value, onChange, defaultTime = '00:00' }: DatePickerFieldProps) {
   const selectedDate = useMemo(() => parseDateValue(value), [value]);
   const [open, setOpen] = useState(false);
-  const [timeOpen, setTimeOpen] = useState(false);
   const localValue = normalizeDateTimeLocalValue(value);
   const timeValue = localValue.split('T')[1] ?? defaultTime;
-  const [draftTime, setDraftTime] = useState(timeValue);
 
   return (
     <div className="flex flex-col gap-2">
@@ -312,44 +312,28 @@ function DatePickerField({ label, value, onChange, defaultTime = '00:00' }: Date
             />
           </PopoverContent>
         </Popover>
-        <Popover
-          open={timeOpen}
-          onOpenChange={(nextOpen) => {
-            setTimeOpen(nextOpen);
-            if (nextOpen) setDraftTime(timeValue);
+        <ConfigProvider
+          theme={{
+            token: {
+              colorPrimary: '#181C32',
+              borderRadius: 8,
+            },
           }}
         >
-          <PopoverTrigger asChild>
-            <Button variant="outline" className="w-[108px] justify-center font-medium">
-              {timeValue}
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent className="w-[220px] p-3" align="end" sideOffset={6}>
-            <div className="space-y-3">
-              <Input
-                type="time"
-                step={60}
-                value={draftTime}
-                onChange={(event) => setDraftTime(event.target.value)}
-                onClick={(event) => {
-                  const input = event.currentTarget as HTMLInputElement & { showPicker?: () => void };
-                  input.showPicker?.();
-                }}
-                className="h-10"
-              />
-              <Button
-                className="w-full bg-primary text-white hover:bg-primary/90 active:bg-primary/80"
-                onClick={() => {
-                  const baseDate = selectedDate ? getDateOnlyString(selectedDate) : getDateOnlyString(new Date());
-                  onChange(`${baseDate}T${draftTime}`);
-                  setTimeOpen(false);
-                }}
-              >
-                OK
-              </Button>
-            </div>
-          </PopoverContent>
-        </Popover>
+          <TimePicker
+            value={dayjs(timeValue, 'HH:mm')}
+            format="HH:mm"
+            minuteStep={1}
+            needConfirm
+            allowClear={false}
+            className="w-[108px]"
+            onChange={(nextTime) => {
+              if (!nextTime) return;
+              const baseDate = selectedDate ? getDateOnlyString(selectedDate) : getDateOnlyString(new Date());
+              onChange(`${baseDate}T${nextTime.format('HH:mm')}`);
+            }}
+          />
+        </ConfigProvider>
       </div>
     </div>
   );

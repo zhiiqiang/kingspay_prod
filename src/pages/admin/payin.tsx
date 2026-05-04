@@ -347,11 +347,13 @@ function DatePickerField({ label, value, onChange, onApply, onClose }: DatePicke
 }
 
 function TimePickerField({ label, value, onChange }: TimePickerFieldProps) {
+  const { t } = useLanguage();
   const [open, setOpen] = useState(false);
+  const [draftValue, setDraftValue] = useState(value);
   const [hours, minutes, seconds] = useMemo(() => {
-    const [h = '00', m = '00', sec = '00'] = value.split(':');
+    const [h = '00', m = '00', sec = '00'] = draftValue.split(':');
     return [h.padStart(2, '0'), m.padStart(2, '0'), sec.padStart(2, '0')];
-  }, [value]);
+  }, [draftValue]);
 
   const renderColumn = (max: number, selected: string, onPick: (next: string) => void) => (
     <div className="max-h-56 w-11 space-y-1 overflow-y-auto pr-1">
@@ -372,7 +374,15 @@ function TimePickerField({ label, value, onChange }: TimePickerFieldProps) {
   return (
     <div className="flex min-w-[110px] flex-col gap-2">
       <span className="text-sm font-medium text-muted-foreground">{label}</span>
-      <Popover open={open} onOpenChange={setOpen}>
+      <Popover
+        open={open}
+        onOpenChange={(nextOpen) => {
+          if (nextOpen) {
+            setDraftValue(value);
+          }
+          setOpen(nextOpen);
+        }}
+      >
         <PopoverTrigger asChild>
           <Button
             variant="outline"
@@ -386,14 +396,39 @@ function TimePickerField({ label, value, onChange }: TimePickerFieldProps) {
             <ChevronDown className="h-3.5 w-3.5 opacity-80" />
           </Button>
         </PopoverTrigger>
-        <PopoverContent className="w-[170px] p-2" align="end" sideOffset={6}>
-          <div className="mb-2 grid grid-cols-3 gap-1 text-center text-[10px] text-muted-foreground">
-            <span>HH</span><span>MM</span><span>SS</span>
+        <PopoverContent className="w-[220px] p-2" align="end" sideOffset={6}>
+          <div className="mb-2 grid grid-cols-4 gap-1 text-center text-[10px] text-muted-foreground">
+            <span>HH</span><span>MM</span><span>SS</span><span></span>
           </div>
-          <div className="grid grid-cols-3 gap-1">
-            {renderColumn(24, hours, (nextHour) => onChange(`${nextHour}:${minutes}:${seconds}`))}
-            {renderColumn(60, minutes, (nextMinute) => onChange(`${hours}:${nextMinute}:${seconds}`))}
-            {renderColumn(60, seconds, (nextSecond) => onChange(`${hours}:${minutes}:${nextSecond}`))}
+          <div className="grid grid-cols-4 gap-1">
+            {renderColumn(24, hours, (nextHour) => setDraftValue(`${nextHour}:${minutes}:${seconds}`))}
+            {renderColumn(60, minutes, (nextMinute) => setDraftValue(`${hours}:${nextMinute}:${seconds}`))}
+            {renderColumn(60, seconds, (nextSecond) => setDraftValue(`${hours}:${minutes}:${nextSecond}`))}
+            <div className="flex h-full flex-col justify-between gap-2">
+              <Button
+                type="button"
+                size="sm"
+                className="h-8 w-full"
+                onClick={() => {
+                  onChange(draftValue);
+                  setOpen(false);
+                }}
+              >
+                {t('payin.filters.timeOk')}
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                className="h-8 w-full"
+                onClick={() => {
+                  setDraftValue(value);
+                  setOpen(false);
+                }}
+              >
+                {t('payin.filters.timeCancel')}
+              </Button>
+            </div>
           </div>
         </PopoverContent>
       </Popover>
@@ -915,7 +950,7 @@ const PayinFilters = memo(function PayinFilters({
                     onApply={(value) => onDatePickerApply(value, 'from')}
                     onClose={onDatePickerClose}
                   />
-                  <TimePickerField label="From Time" value={createdFromTimeInput} onChange={onCreatedFromTimeChange} />
+                  <TimePickerField label={t('payin.filters.timeFrom')} value={createdFromTimeInput} onChange={onCreatedFromTimeChange} />
                 </div>
                 <div className="grid w-full grid-cols-[minmax(0,1.7fr)_minmax(0,1fr)] items-end gap-2">
                   <DatePickerField
@@ -925,7 +960,7 @@ const PayinFilters = memo(function PayinFilters({
                     onApply={(value) => onDatePickerApply(value, 'to')}
                     onClose={onDatePickerClose}
                   />
-                  <TimePickerField label="To Time" value={createdToTimeInput} onChange={onCreatedToTimeChange} />
+                  <TimePickerField label={t('payin.filters.timeTo')} value={createdToTimeInput} onChange={onCreatedToTimeChange} />
                 </div>
               </div>
               <div className="grid gap-4 sm:grid-cols-2">
@@ -937,7 +972,7 @@ const PayinFilters = memo(function PayinFilters({
                     onApply={(value) => onSuccessDatePickerApply(value, 'from')}
                     onClose={onSuccessDatePickerClose}
                   />
-                  <TimePickerField label="From Time" value={successFromTimeInput} onChange={onSuccessFromTimeChange} />
+                  <TimePickerField label={t('payin.filters.timeFrom')} value={successFromTimeInput} onChange={onSuccessFromTimeChange} />
                 </div>
                 <div className="grid w-full grid-cols-[minmax(0,1.7fr)_minmax(0,1fr)] items-end gap-2">
                   <DatePickerField
@@ -947,7 +982,7 @@ const PayinFilters = memo(function PayinFilters({
                     onApply={(value) => onSuccessDatePickerApply(value, 'to')}
                     onClose={onSuccessDatePickerClose}
                   />
-                  <TimePickerField label="To Time" value={successToTimeInput} onChange={onSuccessToTimeChange} />
+                  <TimePickerField label={t('payin.filters.timeTo')} value={successToTimeInput} onChange={onSuccessToTimeChange} />
                 </div>
               </div>
             </div>

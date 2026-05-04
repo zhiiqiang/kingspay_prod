@@ -290,6 +290,18 @@ export function AdminBankAccountPage() {
       resetForms();
       if (type === 'edit') setEditingId(null);
     }
+
+    if (type === 'create' && open) {
+      setCreateForm({ bankCode: '', accountNo: '', accountName: '' });
+      setCreateBankSearch('');
+      setFormErrors({});
+    }
+
+    if (type === 'edit' && open) {
+      setEditBankSearch('');
+      setFormErrors({});
+    }
+
     if (type === 'create') setCreateDialogOpen(open);
     if (type === 'edit') setEditDialogOpen(open);
   };
@@ -353,7 +365,7 @@ export function AdminBankAccountPage() {
                     {t('common.add')}
                   </Button>
                 </DialogTrigger>
-                <DialogContent>
+                <DialogContent className="w-[calc(100vw-2rem)] max-w-[calc(100vw-2rem)] sm:max-w-lg">
                 <DialogHeader>
                   <DialogTitle>{t('bankAccount.create.title')}</DialogTitle>
                   <DialogDescription>{t('bankAccount.create.description')}</DialogDescription>
@@ -364,9 +376,12 @@ export function AdminBankAccountPage() {
                     <Select
                       value={createForm.bankCode}
                       onValueChange={(value) => setCreateForm((prev) => ({ ...prev, bankCode: value }))}
+                      onOpenChange={(open) => {
+                        if (open) setCreateBankSearch('');
+                      }}
                       disabled={isBankOptionsLoading}
                     >
-                      <SelectTrigger id="bank-account-bank-code">
+                      <SelectTrigger id="bank-account-bank-code" className="w-full max-w-full min-w-0">
                         <SelectValue
                           placeholder={
                             isBankOptionsLoading ? t('common.loading') : t('bankAccount.form.bankCodePlaceholder')
@@ -478,13 +493,13 @@ export function AdminBankAccountPage() {
                   {!isLoading &&
                     items.map((row) => (
                       <TableRow key={row.id}>
-                        <TableCell>{row.id}</TableCell>
-                        <TableCell>{row.bankCode || '-'}</TableCell>
-                        <TableCell>{row.accountNo || '-'}</TableCell>
-                        <TableCell>{row.accountName || '-'}</TableCell>
-                        <TableCell>{row.created_at || '-'}</TableCell>
-                        <TableCell>{row.updated_at || '-'}</TableCell>
-                        <TableCell className="text-right">
+                        <TableCell data-label={t('bankAccount.table.id')}>{row.id}</TableCell>
+                        <TableCell data-label={t('bankAccount.table.bankCode')}>{row.bankCode || '-'}</TableCell>
+                        <TableCell data-label={t('bankAccount.table.accountNo')}>{row.accountNo || '-'}</TableCell>
+                        <TableCell data-label={t('bankAccount.table.accountName')}>{row.accountName || '-'}</TableCell>
+                        <TableCell data-label={t('bankAccount.table.createdAt')}>{row.created_at || '-'}</TableCell>
+                        <TableCell data-label={t('bankAccount.table.updatedAt')}>{row.updated_at || '-'}</TableCell>
+                        <TableCell data-label={t('bankAccount.table.action')} className="text-right">
                           <div className="flex justify-end gap-2">
                             {canUpdate && (
                               <Button
@@ -548,7 +563,7 @@ export function AdminBankAccountPage() {
 
       {canUpdate && (
         <Dialog open={editDialogOpen} onOpenChange={(open) => handleDialogChange(open, 'edit')}>
-          <DialogContent>
+          <DialogContent className="w-[calc(100vw-2rem)] max-w-[calc(100vw-2rem)] sm:max-w-lg">
           <DialogHeader>
             <DialogTitle>{t('bankAccount.edit.title')}</DialogTitle>
             <DialogDescription>{t('bankAccount.edit.description')}</DialogDescription>
@@ -563,9 +578,12 @@ export function AdminBankAccountPage() {
                   <Select
                     value={editForm.bankCode}
                     onValueChange={(value) => setEditForm((prev) => ({ ...prev, bankCode: value }))}
+                    onOpenChange={(open) => {
+                      if (open) setEditBankSearch('');
+                    }}
                     disabled={isBankOptionsLoading}
                   >
-                    <SelectTrigger id="bank-account-edit-bank-code">
+                    <SelectTrigger id="bank-account-edit-bank-code" className="w-full max-w-full min-w-0">
                       <SelectValue
                         placeholder={isBankOptionsLoading ? t('common.loading') : t('bankAccount.form.bankCodePlaceholder')}
                       />

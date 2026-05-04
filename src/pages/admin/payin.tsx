@@ -299,7 +299,7 @@ function DatePickerField({ label, value, onChange, onApply, onClose }: DatePicke
           <Button
             variant="outline"
             className={cn(
-              'flex w-full items-center justify-between gap-2 text-left font-normal shadow-sm transition hover:shadow-sm focus-visible:ring-2 focus-visible:ring-offset-2 md:w-[220px]',
+              'flex h-10 w-full items-center justify-between gap-2 text-left font-normal shadow-sm transition hover:shadow-sm focus-visible:ring-2 focus-visible:ring-offset-2',
               !selectedDate && 'text-muted-foreground',
             )}
           >
@@ -357,13 +357,13 @@ function TimePickerField({ label, value, onChange }: TimePickerFieldProps) {
   );
 
   return (
-    <div className="flex min-w-[130px] flex-col gap-2">
+    <div className="flex min-w-[96px] flex-col gap-2">
       <span className="text-sm font-medium text-muted-foreground">{label}</span>
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
           <Button
             variant="outline"
-            className="h-10 w-full justify-between px-3 text-xs font-medium"
+            className="h-10 w-full justify-between px-2.5 text-xs font-medium"
             onClick={() => setOpen(true)}
           >
             <span className="flex items-center gap-2">
@@ -373,7 +373,7 @@ function TimePickerField({ label, value, onChange }: TimePickerFieldProps) {
             <ChevronDown className="h-3.5 w-3.5 opacity-80" />
           </Button>
         </PopoverTrigger>
-        <PopoverContent className="w-[130px] p-1" align="end" sideOffset={6}>
+        <PopoverContent className="w-[110px] p-1" align="end" sideOffset={6}>
           <div className="max-h-56 space-y-1 overflow-y-auto pr-1">
             {options.map((time) => (
               <Button
@@ -891,7 +891,7 @@ const PayinFilters = memo(function PayinFilters({
               </div>
               <Separator />
               <div className="grid gap-4 sm:grid-cols-2">
-                <div className="flex items-end gap-2">
+                <div className="grid w-full grid-cols-[minmax(0,1.7fr)_minmax(0,1fr)] items-end gap-2">
                   <DatePickerField
                     label={t('payin.filters.createdFrom')}
                     value={createdFromInput}
@@ -901,7 +901,7 @@ const PayinFilters = memo(function PayinFilters({
                   />
                   <TimePickerField label="From Time" value={createdFromTimeInput} onChange={onCreatedFromTimeChange} />
                 </div>
-                <div className="flex items-end gap-2">
+                <div className="grid w-full grid-cols-[minmax(0,1.7fr)_minmax(0,1fr)] items-end gap-2">
                   <DatePickerField
                     label={t('payin.filters.createdTo')}
                     value={createdToInput}

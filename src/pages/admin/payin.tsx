@@ -279,8 +279,6 @@ function DatePickerField({ label, value, onChange, defaultTime = '00:00' }: Date
   const localValue = normalizeDateTimeLocalValue(value);
   const timeValue = localValue.split('T')[1] ?? defaultTime;
   const [draftTime, setDraftTime] = useState(timeValue);
-  const hourOptions = useMemo(() => Array.from({ length: 24 }, (_, index) => String(index).padStart(2, '0')), []);
-  const minuteOptions = useMemo(() => Array.from({ length: 60 }, (_, index) => String(index).padStart(2, '0')), []);
 
   return (
     <div className="flex flex-col gap-2">
@@ -328,25 +326,19 @@ function DatePickerField({ label, value, onChange, defaultTime = '00:00' }: Date
           </PopoverTrigger>
           <PopoverContent className="w-[220px] p-3" align="end" sideOffset={6}>
             <div className="space-y-3">
-              <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2">
-                <Select
-                  value={draftTime.split(':')[0]}
-                  onValueChange={(nextHour) => setDraftTime(`${nextHour}:${draftTime.split(':')[1] ?? '00'}`)}
-                >
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>{hourOptions.map((hour) => <SelectItem key={hour} value={hour}>{hour}</SelectItem>)}</SelectContent>
-                </Select>
-                <span className="text-muted-foreground">:</span>
-                <Select
-                  value={draftTime.split(':')[1] ?? '00'}
-                  onValueChange={(nextMinute) => setDraftTime(`${draftTime.split(':')[0] ?? '00'}:${nextMinute}`)}
-                >
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>{minuteOptions.map((minute) => <SelectItem key={minute} value={minute}>{minute}</SelectItem>)}</SelectContent>
-                </Select>
-              </div>
+              <Input
+                type="time"
+                step={60}
+                value={draftTime}
+                onChange={(event) => setDraftTime(event.target.value)}
+                onClick={(event) => {
+                  const input = event.currentTarget as HTMLInputElement & { showPicker?: () => void };
+                  input.showPicker?.();
+                }}
+                className="h-10"
+              />
               <Button
-                className="w-full"
+                className="w-full bg-primary text-white hover:bg-primary/90 active:bg-primary/80"
                 onClick={() => {
                   const baseDate = selectedDate ? getDateOnlyString(selectedDate) : getDateOnlyString(new Date());
                   onChange(`${baseDate}T${draftTime}`);
@@ -981,7 +973,7 @@ const PayinTable = memo(function PayinTable({
                   <div className="flex h-14 w-14 items-center justify-center rounded-full bg-muted">
                     <Inbox className="h-7 w-7" aria-hidden />
                   </div>
-                  <div className="space-y-1">
+                  <div className="space-y-1 text-center">
                     <div className="text-base font-medium text-foreground">{t('payin.empty.title')}</div>
                     <div>{t('payin.empty.description')}</div>
                   </div>

@@ -143,15 +143,34 @@ function SelectContent({
     return '';
   };
 
+  const filterNodes = (node: ReactNode): ReactNode => {
+    if (!searchable || !normalizedQuery) return node;
+    if (!isValidElement(node)) return node;
+
+    const propsWithChildren = node.props as { children?: ReactNode; value?: string };
+
+    // SelectItem-like node: has a `value` prop and text children.
+    if (typeof propsWithChildren.value !== 'undefined') {
+      const optionText = getNodeText(propsWithChildren.children).toLowerCase();
+      return optionText.includes(normalizedQuery) ? node : null;
+    }
+
+    if (!propsWithChildren.children) return node;
+
+    const nextChildren = React.Children.map(propsWithChildren.children, (child) => filterNodes(child))
+      ?.filter(Boolean);
+
+    if (!nextChildren || nextChildren.length === 0) {
+      return null;
+    }
+
+    return React.cloneElement(node, undefined, nextChildren);
+  };
+
   const filteredChildren = React.useMemo(() => {
     if (!searchable || !normalizedQuery) return children;
-
-    const childList = React.Children.toArray(children);
-    return childList.filter((child) => {
-      if (!isValidElement(child)) return true;
-      const optionText = getNodeText(child.props.children).toLowerCase();
-      return optionText.includes(normalizedQuery);
-    });
+    const mapped = React.Children.map(children, (child) => filterNodes(child))?.filter(Boolean);
+    return mapped ?? children;
   }, [children, normalizedQuery, searchable]);
 
   return (

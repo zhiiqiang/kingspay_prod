@@ -363,8 +363,7 @@ function TimePickerField({ label, value, onChange }: TimePickerFieldProps) {
         <PopoverTrigger asChild>
           <Button
             variant="outline"
-            className="h-10 w-full justify-between border-yellow-300 bg-yellow-50 px-3 text-xs font-medium text-yellow-900 hover:bg-yellow-100"
-            onMouseEnter={() => setOpen(true)}
+            className="h-10 w-full justify-between px-3 text-xs font-medium"
             onClick={() => setOpen(true)}
           >
             <span className="flex items-center gap-2">
@@ -374,7 +373,7 @@ function TimePickerField({ label, value, onChange }: TimePickerFieldProps) {
             <ChevronDown className="h-3.5 w-3.5 opacity-80" />
           </Button>
         </PopoverTrigger>
-        <PopoverContent className="w-[130px] border-yellow-200 bg-yellow-50 p-1" align="end" sideOffset={6}>
+        <PopoverContent className="w-[130px] p-1" align="end" sideOffset={6}>
           <div className="max-h-56 space-y-1 overflow-y-auto pr-1">
             {options.map((time) => (
               <Button
@@ -386,8 +385,8 @@ function TimePickerField({ label, value, onChange }: TimePickerFieldProps) {
                   setOpen(false);
                 }}
                 className={cn(
-                  'h-7 w-full justify-start gap-1.5 px-2 text-[11px] text-yellow-900 hover:bg-yellow-200/80',
-                  value === time && 'bg-yellow-200 font-semibold',
+                  'h-7 w-full justify-start gap-1.5 px-2 text-[11px]',
+                  value === time && 'bg-accent font-semibold',
                 )}
               >
                 <Clock3 className="h-3 w-3" />

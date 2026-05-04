@@ -28,7 +28,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { CalendarIcon, CheckCircle2, Filter, Inbox, Info, RefreshCcw, SlidersHorizontal, Download, Loader2 } from 'lucide-react';
+import { CalendarIcon, CheckCircle2, ChevronDown, Clock3, Filter, Inbox, Info, RefreshCcw, SlidersHorizontal, Download, Loader2 } from 'lucide-react';
 import { ApiAuthError, apiFetch } from '@/lib/api';
 import { getStoredAuthToken, getStoredUserPermissions } from '@/lib/auth';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -145,8 +145,10 @@ const getDateOnlyString = (date: Date) => {
   return `${year}-${month}-${day}`;
 };
 
-const getStartOfDayString = (date: Date) => `${getDateOnlyString(date)} 00:00:00`;
-const getEndOfDayString = (date: Date) => `${getDateOnlyString(date)} 23:59:59`;
+const getDateTimeString = (date: Date, time: string, fallback: string) => {
+  const normalizedTime = /^([01]\d|2[0-3]):[0-5]\d:[0-5]\d$/.test(time) ? time : fallback;
+  return `${getDateOnlyString(date)} ${normalizedTime}`;
+};
 /** Default created-date range: yesterday through today (inclusive). */
 const getDefaultCreatedFromDate = () => getDateOnlyString(new Date());
 
@@ -209,8 +211,12 @@ interface PayinFiltersProps {
   nmidRef: React.MutableRefObject<HTMLInputElement | null>;
   createdFromInput: string;
   createdToInput: string;
+  createdFromTimeInput: string;
+  createdToTimeInput: string;
   successFromInput: string;
   successToInput: string;
+  successFromTimeInput: string;
+  successToTimeInput: string;
   columnConfigs: PayinColumnConfig[];
   visibleColumns: Set<PayinColumnId>;
   isRefreshing: boolean;
@@ -226,8 +232,12 @@ interface PayinFiltersProps {
   onSuccessDatePickerClose: (value: string, field: 'from' | 'to') => void;
   onCreatedFromChange: (value: string) => void;
   onCreatedToChange: (value: string) => void;
+  onCreatedFromTimeChange: (value: string) => void;
+  onCreatedToTimeChange: (value: string) => void;
   onSuccessFromChange: (value: string) => void;
   onSuccessToChange: (value: string) => void;
+  onSuccessFromTimeChange: (value: string) => void;
+  onSuccessToTimeChange: (value: string) => void;
   onToggleColumnVisibility: (columnId: PayinColumnId, isVisible: boolean) => void;
 }
 
@@ -246,6 +256,12 @@ interface DatePickerFieldProps {
   onChange: (value: string) => void;
   onApply?: (value: string) => void;
   onClose?: () => void;
+}
+
+interface TimePickerFieldProps {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
 }
 
 const parseDateValue = (value?: string) => {
@@ -285,7 +301,7 @@ function DatePickerField({ label, value, onChange, onApply, onClose }: DatePicke
           <Button
             variant="outline"
             className={cn(
-              'flex w-full items-center justify-between gap-2 text-left font-normal shadow-sm transition hover:shadow-sm focus-visible:ring-2 focus-visible:ring-offset-2 md:w-[220px]',
+              'flex h-10 w-full items-center justify-between gap-2 text-left font-normal shadow-sm transition hover:shadow-sm focus-visible:ring-2 focus-visible:ring-offset-2',
               !selectedDate && 'text-muted-foreground',
             )}
           >
@@ -329,6 +345,97 @@ function DatePickerField({ label, value, onChange, onApply, onClose }: DatePicke
     </div>
   );
 }
+
+function TimePickerField({ label, value, onChange }: TimePickerFieldProps) {
+  const { t } = useLanguage();
+  const [open, setOpen] = useState(false);
+  const [draftValue, setDraftValue] = useState(value);
+  const [hours, minutes, seconds] = useMemo(() => {
+    const [h = '00', m = '00', sec = '00'] = draftValue.split(':');
+    return [h.padStart(2, '0'), m.padStart(2, '0'), sec.padStart(2, '0')];
+  }, [draftValue]);
+
+  const renderColumn = (max: number, selected: string, onPick: (next: string) => void) => (
+    <div className="max-h-56 w-11 space-y-1 overflow-y-auto pr-1">
+      {Array.from({ length: max }, (_, index) => String(index).padStart(2, '0')).map((item) => (
+        <Button
+          key={item}
+          type="button"
+          variant="ghost"
+          onClick={() => onPick(item)}
+          className={cn('h-7 w-full px-1 text-[11px]', selected === item && 'bg-accent font-semibold')}
+        >
+          {item}
+        </Button>
+      ))}
+    </div>
+  );
+
+  return (
+    <div className="flex min-w-[110px] flex-col gap-2">
+      <span className="text-sm font-medium text-muted-foreground">{label}</span>
+      <Popover
+        open={open}
+        onOpenChange={(nextOpen) => {
+          if (nextOpen) {
+            setDraftValue(value);
+          }
+          setOpen(nextOpen);
+        }}
+      >
+        <PopoverTrigger asChild>
+          <Button
+            variant="outline"
+            className="h-10 w-full justify-between px-2.5 text-xs font-medium"
+            onClick={() => setOpen(true)}
+          >
+            <span className="flex items-center gap-1.5">
+              <Clock3 className="h-3.5 w-3.5" />
+              {value}
+            </span>
+            <ChevronDown className="h-3.5 w-3.5 opacity-80" />
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-[220px] p-2" align="end" sideOffset={6}>
+          <div className="mb-2 grid grid-cols-4 gap-1 text-center text-[10px] text-muted-foreground">
+            <span>HH</span><span>MM</span><span>SS</span><span></span>
+          </div>
+          <div className="grid grid-cols-4 gap-1">
+            {renderColumn(24, hours, (nextHour) => setDraftValue(`${nextHour}:${minutes}:${seconds}`))}
+            {renderColumn(60, minutes, (nextMinute) => setDraftValue(`${hours}:${nextMinute}:${seconds}`))}
+            {renderColumn(60, seconds, (nextSecond) => setDraftValue(`${hours}:${minutes}:${nextSecond}`))}
+            <div className="flex h-full flex-col justify-start gap-2">
+              <Button
+                type="button"
+                size="sm"
+                className="h-8 w-full bg-primary text-[11px] text-white hover:bg-primary/90 active:bg-primary/80"
+                onClick={() => {
+                  onChange(draftValue);
+                  setOpen(false);
+                }}
+              >
+                {t('payin.filters.timeOk')}
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                className="h-8 w-full text-[11px]"
+                onClick={() => {
+                  setDraftValue(value);
+                  setOpen(false);
+                }}
+              >
+                {t('payin.filters.timeCancel')}
+              </Button>
+            </div>
+          </div>
+        </PopoverContent>
+      </Popover>
+    </div>
+  );
+}
+
 
 const PayinSummaryCards = memo(function PayinSummaryCards({
   summary,
@@ -421,8 +528,12 @@ const PayinFilters = memo(function PayinFilters({
   idSettlementRef,
   createdFromInput,
   createdToInput,
+  createdFromTimeInput,
+  createdToTimeInput,
   successFromInput,
   successToInput,
+  successFromTimeInput,
+  successToTimeInput,
   columnConfigs,
   visibleColumns,
   isRefreshing,
@@ -438,8 +549,12 @@ const PayinFilters = memo(function PayinFilters({
   onSuccessDatePickerClose,
   onCreatedFromChange,
   onCreatedToChange,
+  onCreatedFromTimeChange,
+  onCreatedToTimeChange,
   onSuccessFromChange,
   onSuccessToChange,
+  onSuccessFromTimeChange,
+  onSuccessToTimeChange,
   onToggleColumnVisibility,
 }: PayinFiltersProps) {
   const { t } = useLanguage();
@@ -497,8 +612,12 @@ const PayinFilters = memo(function PayinFilters({
     status,
     createdFromInput,
     createdToInput,
+    createdFromTimeInput,
+    createdToTimeInput,
     successFromInput,
     successToInput,
+    successFromTimeInput,
+    successToTimeInput,
   });
   const activeFilterCount = useMemo(() => {
     const extraFilters =
@@ -547,8 +666,12 @@ const PayinFilters = memo(function PayinFilters({
     setStatusDraft(snapshot.status);
     onCreatedFromChange(snapshot.createdFromInput);
     onCreatedToChange(snapshot.createdToInput);
+    onCreatedFromTimeChange(snapshot.createdFromTimeInput);
+    onCreatedToTimeChange(snapshot.createdToTimeInput);
     onSuccessFromChange(snapshot.successFromInput);
     onSuccessToChange(snapshot.successToInput);
+    onSuccessFromTimeChange(snapshot.successFromTimeInput);
+    onSuccessToTimeChange(snapshot.successToTimeInput);
   }, [
     idAgentRef,
     idMerchantRef,
@@ -556,8 +679,12 @@ const PayinFilters = memo(function PayinFilters({
     merchantTrxIdRef,
     onCreatedFromChange,
     onCreatedToChange,
+    onCreatedFromTimeChange,
+    onCreatedToTimeChange,
     onSuccessFromChange,
     onSuccessToChange,
+    onSuccessFromTimeChange,
+    onSuccessToTimeChange,
     partnerTrxIdRef,
     platformTrxIdRef,
     rrnRef,
@@ -585,8 +712,12 @@ const PayinFilters = memo(function PayinFilters({
           status,
           createdFromInput,
           createdToInput,
+          createdFromTimeInput,
+          createdToTimeInput,
           successFromInput,
           successToInput,
+          successFromTimeInput,
+          successToTimeInput,
         };
       }
 
@@ -598,6 +729,8 @@ const PayinFilters = memo(function PayinFilters({
     [
       createdFromInput,
       createdToInput,
+      createdFromTimeInput,
+      createdToTimeInput,
       idAgent,
       idAgentRef,
       idMerchant,
@@ -616,6 +749,8 @@ const PayinFilters = memo(function PayinFilters({
       status,
       successFromInput,
       successToInput,
+      successFromTimeInput,
+      successToTimeInput,
     ],
   );
 
@@ -807,36 +942,48 @@ const PayinFilters = memo(function PayinFilters({
               </div>
               <Separator />
               <div className="grid gap-4 sm:grid-cols-2">
-                <DatePickerField
-                  label={t('payin.filters.createdFrom')}
-                  value={createdFromInput}
-                  onChange={onCreatedFromChange}
-                  onApply={(value) => onDatePickerApply(value, 'from')}
-                  onClose={onDatePickerClose}
-                />
-                <DatePickerField
-                  label={t('payin.filters.createdTo')}
-                  value={createdToInput}
-                  onChange={onCreatedToChange}
-                  onApply={(value) => onDatePickerApply(value, 'to')}
-                  onClose={onDatePickerClose}
-                />
+                <div className="grid w-full grid-cols-[minmax(0,1.7fr)_minmax(0,1fr)] items-end gap-2">
+                  <DatePickerField
+                    label={t('payin.filters.createdFrom')}
+                    value={createdFromInput}
+                    onChange={onCreatedFromChange}
+                    onApply={(value) => onDatePickerApply(value, 'from')}
+                    onClose={onDatePickerClose}
+                  />
+                  <TimePickerField label={t('payin.filters.timeFrom')} value={createdFromTimeInput} onChange={onCreatedFromTimeChange} />
+                </div>
+                <div className="grid w-full grid-cols-[minmax(0,1.7fr)_minmax(0,1fr)] items-end gap-2">
+                  <DatePickerField
+                    label={t('payin.filters.createdTo')}
+                    value={createdToInput}
+                    onChange={onCreatedToChange}
+                    onApply={(value) => onDatePickerApply(value, 'to')}
+                    onClose={onDatePickerClose}
+                  />
+                  <TimePickerField label={t('payin.filters.timeTo')} value={createdToTimeInput} onChange={onCreatedToTimeChange} />
+                </div>
               </div>
               <div className="grid gap-4 sm:grid-cols-2">
-                <DatePickerField
-                  label={t('payin.filters.successFrom')}
-                  value={successFromInput}
-                  onChange={onSuccessFromChange}
-                  onApply={(value) => onSuccessDatePickerApply(value, 'from')}
-                  onClose={onSuccessDatePickerClose}
-                />
-                <DatePickerField
-                  label={t('payin.filters.successTo')}
-                  value={successToInput}
-                  onChange={onSuccessToChange}
-                  onApply={(value) => onSuccessDatePickerApply(value, 'to')}
-                  onClose={onSuccessDatePickerClose}
-                />
+                <div className="grid w-full grid-cols-[minmax(0,1.7fr)_minmax(0,1fr)] items-end gap-2">
+                  <DatePickerField
+                    label={t('payin.filters.successFrom')}
+                    value={successFromInput}
+                    onChange={onSuccessFromChange}
+                    onApply={(value) => onSuccessDatePickerApply(value, 'from')}
+                    onClose={onSuccessDatePickerClose}
+                  />
+                  <TimePickerField label={t('payin.filters.timeFrom')} value={successFromTimeInput} onChange={onSuccessFromTimeChange} />
+                </div>
+                <div className="grid w-full grid-cols-[minmax(0,1.7fr)_minmax(0,1fr)] items-end gap-2">
+                  <DatePickerField
+                    label={t('payin.filters.successTo')}
+                    value={successToInput}
+                    onChange={onSuccessToChange}
+                    onApply={(value) => onSuccessDatePickerApply(value, 'to')}
+                    onClose={onSuccessDatePickerClose}
+                  />
+                  <TimePickerField label={t('payin.filters.timeTo')} value={successToTimeInput} onChange={onSuccessToTimeChange} />
+                </div>
               </div>
             </div>
             <DialogFooter className="flex flex-col gap-2 sm:flex-row sm:justify-end">
@@ -1111,10 +1258,14 @@ export function AdminPayinPage() {
   const [createdToDate, setCreatedToDate] = useState(getDateOnlyString(new Date()));
   const [createdFromInput, setCreatedFromInput] = useState(getDefaultCreatedFromDate());
   const [createdToInput, setCreatedToInput] = useState(getDateOnlyString(new Date()));
+  const [createdFromTimeInput, setCreatedFromTimeInput] = useState('00:00:00');
+  const [createdToTimeInput, setCreatedToTimeInput] = useState('23:59:59');
   const [successFromDate, setSuccessFromDate] = useState('');
   const [successToDate, setSuccessToDate] = useState('');
   const [successFromInput, setSuccessFromInput] = useState('');
   const [successToInput, setSuccessToInput] = useState('');
+  const [successFromTimeInput, setSuccessFromTimeInput] = useState('00:00:00');
+  const [successToTimeInput, setSuccessToTimeInput] = useState('23:59:59');
   const [totalPages, setTotalPages] = useState(1);
   const [totalItems, setTotalItems] = useState<number | undefined>(0);
   const [isLoading, setIsLoading] = useState(false);
@@ -1133,6 +1284,7 @@ export function AdminPayinPage() {
   const rrnRef = useRef<HTMLInputElement | null>(null);
   const idSettlementRef = useRef<HTMLInputElement | null>(null);
   const skipAutoFetchRef = useRef(false);
+  const [hasSearched, setHasSearched] = useState(true);
   const isTableBusy = isLoading || isPending;
   const tableWrapperRef = useRef<HTMLDivElement | null>(null);
   const [isActionColumnStuck, setIsActionColumnStuck] = useState(false);
@@ -1169,11 +1321,16 @@ export function AdminPayinPage() {
     setCreatedToDate(today);
     setCreatedFromInput(defaultFromDate);
     setCreatedToInput(today);
+    setCreatedFromTimeInput('00:00:00');
+    setCreatedToTimeInput('23:59:59');
     setSuccessFromDate('');
     setSuccessToDate('');
     setSuccessFromInput('');
     setSuccessToInput('');
+    setSuccessFromTimeInput('00:00:00');
+    setSuccessToTimeInput('23:59:59');
     setPage(1);
+    setHasSearched(true);
   }, []);
 
   const handleResetFilters = useCallback(() => {
@@ -1469,12 +1626,14 @@ export function AdminPayinPage() {
             ...(nextRrn.trim() ? { rrn: nextRrn.trim() } : {}),
             ...(nextIdSettlement.trim() ? { idSettlement: nextIdSettlement.trim() } : {}),
             ...(nextStatus !== 'all' ? { status: nextStatus } : {}),
-            createdFrom: getStartOfDayString(new Date(nextCreatedFromDate)),
-            createdTo: getEndOfDayString(new Date(nextCreatedToDate)),
+            createdFrom: getDateTimeString(new Date(nextCreatedFromDate), createdFromTimeInput, '00:00:00'),
+            createdTo: getDateTimeString(new Date(nextCreatedToDate), createdToTimeInput, '23:59:59'),
             ...(nextSuccessFromDate.trim()
-              ? { successFrom: getStartOfDayString(new Date(nextSuccessFromDate)) }
+              ? { successFrom: getDateTimeString(new Date(nextSuccessFromDate), successFromTimeInput, '00:00:00') }
               : {}),
-            ...(nextSuccessToDate.trim() ? { successTo: getEndOfDayString(new Date(nextSuccessToDate)) } : {}),
+            ...(nextSuccessToDate.trim()
+              ? { successTo: getDateTimeString(new Date(nextSuccessToDate), successToTimeInput, '23:59:59') }
+              : {}),
           },
           signal: activeController.signal,
         });
@@ -1517,6 +1676,10 @@ export function AdminPayinPage() {
       status,
       successFromDate,
       successToDate,
+      createdFromTimeInput,
+      createdToTimeInput,
+      successFromTimeInput,
+      successToTimeInput,
     ],
   );
 
@@ -1553,12 +1716,14 @@ export function AdminPayinPage() {
           ...(rrn.trim() ? { rrn: rrn.trim() } : {}),
           ...(idSettlement.trim() ? { idSettlement: idSettlement.trim() } : {}),
           ...(status !== 'all' ? { status } : {}),
-          createdFrom: getStartOfDayString(new Date(createdFromDate)),
-          createdTo: getEndOfDayString(new Date(createdToDate)),
+          createdFrom: getDateTimeString(new Date(createdFromDate), createdFromTimeInput, '00:00:00'),
+          createdTo: getDateTimeString(new Date(createdToDate), createdToTimeInput, '23:59:59'),
           ...(successFromDate.trim()
-            ? { successFrom: getStartOfDayString(new Date(successFromDate)) }
+            ? { successFrom: getDateTimeString(new Date(successFromDate), successFromTimeInput, '00:00:00') }
             : {}),
-          ...(successToDate.trim() ? { successTo: getEndOfDayString(new Date(successToDate)) } : {}),
+          ...(successToDate.trim()
+            ? { successTo: getDateTimeString(new Date(successToDate), successToTimeInput, '23:59:59') }
+            : {}),
         }),
       });
 
@@ -1594,7 +1759,7 @@ export function AdminPayinPage() {
       toast.dismiss(toastId);
       setIsExporting(false);
     }
-  }, [page, limit, platformTrxId, merchantTrxId, partnerTrxId, storeName, nmid, idMerchant, idAgent, rrn, idSettlement, status, createdFromDate, createdToDate, successFromDate, successToDate, t]);
+  }, [page, limit, platformTrxId, merchantTrxId, partnerTrxId, storeName, nmid, idMerchant, idAgent, rrn, idSettlement, status, createdFromDate, createdToDate, createdFromTimeInput, createdToTimeInput, successFromDate, successToDate, successFromTimeInput, successToTimeInput, t]);
 
   const triggerPayinSearch = useCallback(
     (
@@ -1684,195 +1849,42 @@ export function AdminPayinPage() {
       status,
       successFromDate,
       successToDate,
+      createdFromTimeInput,
+      createdToTimeInput,
+      successFromTimeInput,
+      successToTimeInput,
     ],
   );
 
-  const handleDatePickerApply = useCallback(
-    (nextValue: string, field: 'from' | 'to') => {
-      const nextPlatformTrxId = platformTrxIdRef.current?.value ?? platformTrxId;
-      const nextMerchantTrxId = merchantTrxIdRef.current?.value ?? merchantTrxId;
-      const nextPartnerTrxId = partnerTrxIdRef.current?.value ?? partnerTrxId;
-      const nextStoreName = storeNameRef.current?.value ?? storeName;
-      const nextNmid = nmidRef.current?.value ?? nmid;
-      const nextIdMerchant = idMerchantRef.current?.value ?? idMerchant;
-      const nextIdAgent = idAgentRef.current?.value ?? idAgent;
-      const nextRrn = rrnRef.current?.value ?? rrn;
-      const nextIdSettlement = idSettlementRef.current?.value ?? idSettlement;
-      triggerPayinSearch({
-        page: 1,
-        platformTrxId: nextPlatformTrxId,
-        merchantTrxId: nextMerchantTrxId,
-        partnerTrxId: nextPartnerTrxId,
-        storeName: nextStoreName,
-        nmid: nextNmid,
-        idMerchant: nextIdMerchant,
-        idAgent: nextIdAgent,
-        rrn: nextRrn,
-        idSettlement: nextIdSettlement,
-        status,
-        createdFromDate: field === 'from' ? nextValue : createdFromInput,
-        createdToDate: field === 'to' ? nextValue : createdToInput,
-        successFromDate: successFromInput,
-        successToDate: successToInput,
-      });
-    },
-    [
-      createdFromInput,
-      createdToInput,
-      idAgent,
-      idMerchant,
-      idSettlement,
-      merchantTrxId,
-      partnerTrxId,
-      platformTrxId,
-      rrn,
-      status,
-      successFromInput,
-      successToInput,
-      triggerPayinSearch,
-    ],
-  );
+  const handleDatePickerApply = useCallback(() => {
+    // Intentionally no background fetch on date apply.
+    // Filters are executed only when user clicks Search.
+  }, []);
 
   const handleDatePickerClose = useCallback(() => {
-    const nextPlatformTrxId = platformTrxIdRef.current?.value ?? platformTrxId;
-    const nextMerchantTrxId = merchantTrxIdRef.current?.value ?? merchantTrxId;
-    const nextPartnerTrxId = partnerTrxIdRef.current?.value ?? partnerTrxId;
-    const nextStoreName = storeNameRef.current?.value ?? storeName;
-    const nextNmid = nmidRef.current?.value ?? nmid;
-    const nextIdMerchant = idMerchantRef.current?.value ?? idMerchant;
-    const nextIdAgent = idAgentRef.current?.value ?? idAgent;
-    const nextRrn = rrnRef.current?.value ?? rrn;
-    const nextIdSettlement = idSettlementRef.current?.value ?? idSettlement;
-    triggerPayinSearch({
-      page: 1,
-      platformTrxId: nextPlatformTrxId,
-      merchantTrxId: nextMerchantTrxId,
-      partnerTrxId: nextPartnerTrxId,
-      storeName: nextStoreName,
-      nmid: nextNmid,
-      idMerchant: nextIdMerchant,
-      idAgent: nextIdAgent,
-      rrn: nextRrn,
-      idSettlement: nextIdSettlement,
-      status,
-      createdFromDate: createdFromInput,
-      createdToDate: createdToInput,
-      successFromDate: successFromInput,
-      successToDate: successToInput,
-    });
-  }, [
-    createdFromInput,
-    createdToInput,
-    idAgent,
-    idMerchant,
-    idSettlement,
-    merchantTrxId,
-    partnerTrxId,
-    platformTrxId,
-    rrn,
-    status,
-    successFromInput,
-    successToInput,
-    triggerPayinSearch,
-  ]);
+    // Intentionally no background fetch on date picker close.
+    // Filters are executed only when user clicks Search.
+  }, []);
 
-  const handleSuccessDatePickerApply = useCallback(
-    (nextValue: string, field: 'from' | 'to') => {
-      const nextPlatformTrxId = platformTrxIdRef.current?.value ?? platformTrxId;
-      const nextMerchantTrxId = merchantTrxIdRef.current?.value ?? merchantTrxId;
-      const nextPartnerTrxId = partnerTrxIdRef.current?.value ?? partnerTrxId;
-      const nextStoreName = storeNameRef.current?.value ?? storeName;
-      const nextNmid = nmidRef.current?.value ?? nmid;
-      const nextIdMerchant = idMerchantRef.current?.value ?? idMerchant;
-      const nextIdAgent = idAgentRef.current?.value ?? idAgent;
-      const nextRrn = rrnRef.current?.value ?? rrn;
-      const nextIdSettlement = idSettlementRef.current?.value ?? idSettlement;
-      triggerPayinSearch({
-        page: 1,
-        platformTrxId: nextPlatformTrxId,
-        merchantTrxId: nextMerchantTrxId,
-        partnerTrxId: nextPartnerTrxId,
-        storeName: nextStoreName,
-        nmid: nextNmid,
-        idMerchant: nextIdMerchant,
-        idAgent: nextIdAgent,
-        rrn: nextRrn,
-        idSettlement: nextIdSettlement,
-        status,
-        createdFromDate: createdFromInput,
-        createdToDate: createdToInput,
-        successFromDate: field === 'from' ? nextValue : successFromInput,
-        successToDate: field === 'to' ? nextValue : successToInput,
-      });
-    },
-    [
-      createdFromInput,
-      createdToInput,
-      idAgent,
-      idMerchant,
-      idSettlement,
-      merchantTrxId,
-      partnerTrxId,
-      platformTrxId,
-      rrn,
-      status,
-      successFromInput,
-      successToInput,
-      triggerPayinSearch,
-    ],
-  );
+  const handleSuccessDatePickerApply = useCallback(() => {
+    // Intentionally no background fetch on success date apply.
+    // Filters are executed only when user clicks Search.
+  }, []);
 
   const handleSuccessDatePickerClose = useCallback(() => {
-    const nextPlatformTrxId = platformTrxIdRef.current?.value ?? platformTrxId;
-    const nextMerchantTrxId = merchantTrxIdRef.current?.value ?? merchantTrxId;
-    const nextPartnerTrxId = partnerTrxIdRef.current?.value ?? partnerTrxId;
-    const nextStoreName = storeNameRef.current?.value ?? storeName;
-    const nextNmid = nmidRef.current?.value ?? nmid;
-    const nextIdMerchant = idMerchantRef.current?.value ?? idMerchant;
-    const nextIdAgent = idAgentRef.current?.value ?? idAgent;
-    const nextRrn = rrnRef.current?.value ?? rrn;
-    const nextIdSettlement = idSettlementRef.current?.value ?? idSettlement;
-    triggerPayinSearch({
-      page: 1,
-      platformTrxId: nextPlatformTrxId,
-      merchantTrxId: nextMerchantTrxId,
-      partnerTrxId: nextPartnerTrxId,
-      storeName: nextStoreName,
-      nmid: nextNmid,
-      idMerchant: nextIdMerchant,
-      idAgent: nextIdAgent,
-      rrn: nextRrn,
-      idSettlement: nextIdSettlement,
-      status,
-      createdFromDate: createdFromInput,
-      createdToDate: createdToInput,
-      successFromDate: successFromInput,
-      successToDate: successToInput,
-    });
-  }, [
-    createdFromInput,
-    createdToInput,
-    idAgent,
-    idMerchant,
-    idSettlement,
-    merchantTrxId,
-    partnerTrxId,
-    platformTrxId,
-    rrn,
-    status,
-    successFromInput,
-    successToInput,
-    triggerPayinSearch,
-  ]);
+    // Intentionally no background fetch on success date picker close.
+    // Filters are executed only when user clicks Search.
+  }, []);
 
   const handleRefresh = useCallback(async () => {
+    if (!hasSearched) return;
     setIsRefreshing(true);
     try {
       await fetchPayins();
     } finally {
       setIsRefreshing(false);
     }
-  }, [fetchPayins]);
+  }, [fetchPayins, hasSearched]);
 
   const handleSendCallback = useCallback(async () => {
     if (!callbackItem?.platformTrxId) {
@@ -1921,21 +1933,23 @@ export function AdminPayinPage() {
 
   const handlePageChange = useCallback(
     (nextPage: number) => {
+      if (!hasSearched) return;
       skipAutoFetchRef.current = true;
       setPage(nextPage);
       void fetchPayins(undefined, { page: nextPage, limit });
     },
-    [fetchPayins, limit],
+    [fetchPayins, hasSearched, limit],
   );
 
   const handleLimitChange = useCallback(
     (nextLimit: number) => {
+      if (!hasSearched) return;
       skipAutoFetchRef.current = true;
       setLimit(nextLimit);
       setPage(1);
       void fetchPayins(undefined, { page: 1, limit: nextLimit });
     },
-    [fetchPayins],
+    [fetchPayins, hasSearched],
   );
 
   const handleSearch = useCallback(
@@ -1949,6 +1963,7 @@ export function AdminPayinPage() {
       const nextIdAgent = idAgentRef.current?.value ?? '';
       const nextRrn = rrnRef.current?.value ?? '';
       const nextIdSettlement = idSettlementRef.current?.value ?? '';
+      setHasSearched(true);
       triggerPayinSearch({
         page: 1,
         platformTrxId: nextPlatformTrxId,
@@ -1971,6 +1986,9 @@ export function AdminPayinPage() {
   );
 
   useEffect(() => {
+    if (!hasSearched) {
+      return;
+    }
     if (skipAutoFetchRef.current) {
       skipAutoFetchRef.current = false;
       return;
@@ -1979,7 +1997,7 @@ export function AdminPayinPage() {
     fetchPayins(controller);
 
     return () => controller.abort();
-  }, [fetchPayins]);
+  }, [fetchPayins, hasSearched]);
 
   useEffect(() => {
     setPage(1);
@@ -2057,8 +2075,12 @@ export function AdminPayinPage() {
           idSettlementRef={idSettlementRef}
           createdFromInput={createdFromInput}
           createdToInput={createdToInput}
+          createdFromTimeInput={createdFromTimeInput}
+          createdToTimeInput={createdToTimeInput}
           successFromInput={successFromInput}
           successToInput={successToInput}
+          successFromTimeInput={successFromTimeInput}
+          successToTimeInput={successToTimeInput}
           columnConfigs={columnConfigs}
           visibleColumns={visibleColumns}
           isRefreshing={isRefreshing}
@@ -2074,8 +2096,12 @@ export function AdminPayinPage() {
           onSuccessDatePickerClose={handleSuccessDatePickerClose}
           onCreatedFromChange={setCreatedFromInput}
           onCreatedToChange={setCreatedToInput}
+          onCreatedFromTimeChange={setCreatedFromTimeInput}
+          onCreatedToTimeChange={setCreatedToTimeInput}
           onSuccessFromChange={setSuccessFromInput}
           onSuccessToChange={setSuccessToInput}
+          onSuccessFromTimeChange={setSuccessFromTimeInput}
+          onSuccessToTimeChange={setSuccessToTimeInput}
           onToggleColumnVisibility={toggleColumnVisibility}
         />
         <Separator />

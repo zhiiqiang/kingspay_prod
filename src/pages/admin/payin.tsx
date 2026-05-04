@@ -408,7 +408,7 @@ function TimePickerField({ label, value, onChange }: TimePickerFieldProps) {
               <Button
                 type="button"
                 size="sm"
-                className="h-8 w-full"
+                className="h-8 w-full bg-primary text-[11px] text-white hover:bg-primary/90 active:bg-primary/80"
                 onClick={() => {
                   onChange(draftValue);
                   setOpen(false);
@@ -420,7 +420,7 @@ function TimePickerField({ label, value, onChange }: TimePickerFieldProps) {
                 type="button"
                 size="sm"
                 variant="outline"
-                className="h-8 w-full"
+                className="h-8 w-full text-[11px]"
                 onClick={() => {
                   setDraftValue(value);
                   setOpen(false);
@@ -1284,6 +1284,7 @@ export function AdminPayinPage() {
   const rrnRef = useRef<HTMLInputElement | null>(null);
   const idSettlementRef = useRef<HTMLInputElement | null>(null);
   const skipAutoFetchRef = useRef(false);
+  const [hasSearched, setHasSearched] = useState(false);
   const isTableBusy = isLoading || isPending;
   const tableWrapperRef = useRef<HTMLDivElement | null>(null);
   const [isActionColumnStuck, setIsActionColumnStuck] = useState(false);
@@ -1329,6 +1330,7 @@ export function AdminPayinPage() {
     setSuccessFromTimeInput('00:00:00');
     setSuccessToTimeInput('23:59:59');
     setPage(1);
+    setHasSearched(false);
   }, []);
 
   const handleResetFilters = useCallback(() => {
@@ -2033,13 +2035,14 @@ export function AdminPayinPage() {
   ]);
 
   const handleRefresh = useCallback(async () => {
+    if (!hasSearched) return;
     setIsRefreshing(true);
     try {
       await fetchPayins();
     } finally {
       setIsRefreshing(false);
     }
-  }, [fetchPayins]);
+  }, [fetchPayins, hasSearched]);
 
   const handleSendCallback = useCallback(async () => {
     if (!callbackItem?.platformTrxId) {
@@ -2088,21 +2091,23 @@ export function AdminPayinPage() {
 
   const handlePageChange = useCallback(
     (nextPage: number) => {
+      if (!hasSearched) return;
       skipAutoFetchRef.current = true;
       setPage(nextPage);
       void fetchPayins(undefined, { page: nextPage, limit });
     },
-    [fetchPayins, limit],
+    [fetchPayins, hasSearched, limit],
   );
 
   const handleLimitChange = useCallback(
     (nextLimit: number) => {
+      if (!hasSearched) return;
       skipAutoFetchRef.current = true;
       setLimit(nextLimit);
       setPage(1);
       void fetchPayins(undefined, { page: 1, limit: nextLimit });
     },
-    [fetchPayins],
+    [fetchPayins, hasSearched],
   );
 
   const handleSearch = useCallback(
@@ -2116,6 +2121,7 @@ export function AdminPayinPage() {
       const nextIdAgent = idAgentRef.current?.value ?? '';
       const nextRrn = rrnRef.current?.value ?? '';
       const nextIdSettlement = idSettlementRef.current?.value ?? '';
+      setHasSearched(true);
       triggerPayinSearch({
         page: 1,
         platformTrxId: nextPlatformTrxId,
@@ -2138,6 +2144,9 @@ export function AdminPayinPage() {
   );
 
   useEffect(() => {
+    if (!hasSearched) {
+      return;
+    }
     if (skipAutoFetchRef.current) {
       skipAutoFetchRef.current = false;
       return;
@@ -2146,7 +2155,7 @@ export function AdminPayinPage() {
     fetchPayins(controller);
 
     return () => controller.abort();
-  }, [fetchPayins]);
+  }, [fetchPayins, hasSearched]);
 
   useEffect(() => {
     setPage(1);

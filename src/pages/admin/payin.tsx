@@ -217,6 +217,8 @@ interface PayinFiltersProps {
   createdToTimeInput: string;
   successFromInput: string;
   successToInput: string;
+  successFromTimeInput: string;
+  successToTimeInput: string;
   columnConfigs: PayinColumnConfig[];
   visibleColumns: Set<PayinColumnId>;
   isRefreshing: boolean;
@@ -236,6 +238,8 @@ interface PayinFiltersProps {
   onCreatedToTimeChange: (value: string) => void;
   onSuccessFromChange: (value: string) => void;
   onSuccessToChange: (value: string) => void;
+  onSuccessFromTimeChange: (value: string) => void;
+  onSuccessToTimeChange: (value: string) => void;
   onToggleColumnVisibility: (columnId: PayinColumnId, isVisible: boolean) => void;
 }
 
@@ -495,6 +499,8 @@ const PayinFilters = memo(function PayinFilters({
   createdToTimeInput,
   successFromInput,
   successToInput,
+  successFromTimeInput,
+  successToTimeInput,
   columnConfigs,
   visibleColumns,
   isRefreshing,
@@ -514,6 +520,8 @@ const PayinFilters = memo(function PayinFilters({
   onCreatedToTimeChange,
   onSuccessFromChange,
   onSuccessToChange,
+  onSuccessFromTimeChange,
+  onSuccessToTimeChange,
   onToggleColumnVisibility,
 }: PayinFiltersProps) {
   const { t } = useLanguage();
@@ -575,6 +583,8 @@ const PayinFilters = memo(function PayinFilters({
     createdToTimeInput,
     successFromInput,
     successToInput,
+    successFromTimeInput,
+    successToTimeInput,
   });
   const activeFilterCount = useMemo(() => {
     const extraFilters =
@@ -627,6 +637,8 @@ const PayinFilters = memo(function PayinFilters({
     onCreatedToTimeChange(snapshot.createdToTimeInput);
     onSuccessFromChange(snapshot.successFromInput);
     onSuccessToChange(snapshot.successToInput);
+    onSuccessFromTimeChange(snapshot.successFromTimeInput);
+    onSuccessToTimeChange(snapshot.successToTimeInput);
   }, [
     idAgentRef,
     idMerchantRef,
@@ -638,6 +650,8 @@ const PayinFilters = memo(function PayinFilters({
     onCreatedToTimeChange,
     onSuccessFromChange,
     onSuccessToChange,
+    onSuccessFromTimeChange,
+    onSuccessToTimeChange,
     partnerTrxIdRef,
     platformTrxIdRef,
     rrnRef,
@@ -669,6 +683,8 @@ const PayinFilters = memo(function PayinFilters({
           createdToTimeInput,
           successFromInput,
           successToInput,
+          successFromTimeInput,
+          successToTimeInput,
         };
       }
 
@@ -700,6 +716,8 @@ const PayinFilters = memo(function PayinFilters({
       status,
       successFromInput,
       successToInput,
+      successFromTimeInput,
+      successToTimeInput,
     ],
   );
 
@@ -913,20 +931,26 @@ const PayinFilters = memo(function PayinFilters({
                 </div>
               </div>
               <div className="grid gap-4 sm:grid-cols-2">
-                <DatePickerField
-                  label={t('payin.filters.successFrom')}
-                  value={successFromInput}
-                  onChange={onSuccessFromChange}
-                  onApply={(value) => onSuccessDatePickerApply(value, 'from')}
-                  onClose={onSuccessDatePickerClose}
-                />
-                <DatePickerField
-                  label={t('payin.filters.successTo')}
-                  value={successToInput}
-                  onChange={onSuccessToChange}
-                  onApply={(value) => onSuccessDatePickerApply(value, 'to')}
-                  onClose={onSuccessDatePickerClose}
-                />
+                <div className="grid w-full grid-cols-[minmax(0,1.7fr)_minmax(0,1fr)] items-end gap-2">
+                  <DatePickerField
+                    label={t('payin.filters.successFrom')}
+                    value={successFromInput}
+                    onChange={onSuccessFromChange}
+                    onApply={(value) => onSuccessDatePickerApply(value, 'from')}
+                    onClose={onSuccessDatePickerClose}
+                  />
+                  <TimePickerField label="From Time" value={successFromTimeInput} onChange={onSuccessFromTimeChange} />
+                </div>
+                <div className="grid w-full grid-cols-[minmax(0,1.7fr)_minmax(0,1fr)] items-end gap-2">
+                  <DatePickerField
+                    label={t('payin.filters.successTo')}
+                    value={successToInput}
+                    onChange={onSuccessToChange}
+                    onApply={(value) => onSuccessDatePickerApply(value, 'to')}
+                    onClose={onSuccessDatePickerClose}
+                  />
+                  <TimePickerField label="To Time" value={successToTimeInput} onChange={onSuccessToTimeChange} />
+                </div>
               </div>
             </div>
             <DialogFooter className="flex flex-col gap-2 sm:flex-row sm:justify-end">
@@ -1207,6 +1231,8 @@ export function AdminPayinPage() {
   const [successToDate, setSuccessToDate] = useState('');
   const [successFromInput, setSuccessFromInput] = useState('');
   const [successToInput, setSuccessToInput] = useState('');
+  const [successFromTimeInput, setSuccessFromTimeInput] = useState('00:00');
+  const [successToTimeInput, setSuccessToTimeInput] = useState('23:59');
   const [totalPages, setTotalPages] = useState(1);
   const [totalItems, setTotalItems] = useState<number | undefined>(0);
   const [isLoading, setIsLoading] = useState(false);
@@ -1267,6 +1293,8 @@ export function AdminPayinPage() {
     setSuccessToDate('');
     setSuccessFromInput('');
     setSuccessToInput('');
+    setSuccessFromTimeInput('00:00');
+    setSuccessToTimeInput('23:59');
     setPage(1);
   }, []);
 
@@ -1566,9 +1594,11 @@ export function AdminPayinPage() {
             createdFrom: getDateTimeString(new Date(nextCreatedFromDate), createdFromTimeInput, '00:00'),
             createdTo: getDateTimeString(new Date(nextCreatedToDate), createdToTimeInput, '23:59'),
             ...(nextSuccessFromDate.trim()
-              ? { successFrom: getStartOfDayString(new Date(nextSuccessFromDate)) }
+              ? { successFrom: getDateTimeString(new Date(nextSuccessFromDate), successFromTimeInput, '00:00') }
               : {}),
-            ...(nextSuccessToDate.trim() ? { successTo: getEndOfDayString(new Date(nextSuccessToDate)) } : {}),
+            ...(nextSuccessToDate.trim()
+              ? { successTo: getDateTimeString(new Date(nextSuccessToDate), successToTimeInput, '23:59') }
+              : {}),
           },
           signal: activeController.signal,
         });
@@ -1611,6 +1641,10 @@ export function AdminPayinPage() {
       status,
       successFromDate,
       successToDate,
+      createdFromTimeInput,
+      createdToTimeInput,
+      successFromTimeInput,
+      successToTimeInput,
     ],
   );
 
@@ -1650,9 +1684,11 @@ export function AdminPayinPage() {
           createdFrom: getDateTimeString(new Date(createdFromDate), createdFromTimeInput, '00:00'),
           createdTo: getDateTimeString(new Date(createdToDate), createdToTimeInput, '23:59'),
           ...(successFromDate.trim()
-            ? { successFrom: getStartOfDayString(new Date(successFromDate)) }
+            ? { successFrom: getDateTimeString(new Date(successFromDate), successFromTimeInput, '00:00') }
             : {}),
-          ...(successToDate.trim() ? { successTo: getEndOfDayString(new Date(successToDate)) } : {}),
+          ...(successToDate.trim()
+            ? { successTo: getDateTimeString(new Date(successToDate), successToTimeInput, '23:59') }
+            : {}),
         }),
       });
 
@@ -1688,7 +1724,7 @@ export function AdminPayinPage() {
       toast.dismiss(toastId);
       setIsExporting(false);
     }
-  }, [page, limit, platformTrxId, merchantTrxId, partnerTrxId, storeName, nmid, idMerchant, idAgent, rrn, idSettlement, status, createdFromDate, createdToDate, successFromDate, successToDate, t]);
+  }, [page, limit, platformTrxId, merchantTrxId, partnerTrxId, storeName, nmid, idMerchant, idAgent, rrn, idSettlement, status, createdFromDate, createdToDate, createdFromTimeInput, createdToTimeInput, successFromDate, successToDate, successFromTimeInput, successToTimeInput, t]);
 
   const triggerPayinSearch = useCallback(
     (
@@ -1778,6 +1814,10 @@ export function AdminPayinPage() {
       status,
       successFromDate,
       successToDate,
+      createdFromTimeInput,
+      createdToTimeInput,
+      successFromTimeInput,
+      successToTimeInput,
     ],
   );
 
@@ -2155,6 +2195,8 @@ export function AdminPayinPage() {
           createdToTimeInput={createdToTimeInput}
           successFromInput={successFromInput}
           successToInput={successToInput}
+          successFromTimeInput={successFromTimeInput}
+          successToTimeInput={successToTimeInput}
           columnConfigs={columnConfigs}
           visibleColumns={visibleColumns}
           isRefreshing={isRefreshing}
@@ -2174,6 +2216,8 @@ export function AdminPayinPage() {
           onCreatedToTimeChange={setCreatedToTimeInput}
           onSuccessFromChange={setSuccessFromInput}
           onSuccessToChange={setSuccessToInput}
+          onSuccessFromTimeChange={setSuccessFromTimeInput}
+          onSuccessToTimeChange={setSuccessToTimeInput}
           onToggleColumnVisibility={toggleColumnVisibility}
         />
         <Separator />

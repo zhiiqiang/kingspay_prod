@@ -124,6 +124,17 @@ function SelectContent({
   onSearchValueChange?: (value: string) => void;
   searchPlaceholder?: string;
 }) {
+  const isSearchControlled = typeof onSearchValueChange === 'function';
+  const [internalSearchValue, setInternalSearchValue] = React.useState(searchValue);
+
+  React.useEffect(() => {
+    if (isSearchControlled) {
+      setInternalSearchValue(searchValue);
+    }
+  }, [isSearchControlled, searchValue]);
+
+  const resolvedSearchValue = isSearchControlled ? searchValue : internalSearchValue;
+
   return (
     <SelectPrimitive.Portal>
       <SelectPrimitive.Content
@@ -142,8 +153,15 @@ function SelectContent({
           <div className="px-1.5 pt-1.5">
             <input
               type="text"
-              value={searchValue}
-              onChange={(event) => onSearchValueChange?.(event.target.value)}
+              value={resolvedSearchValue}
+              onChange={(event) => {
+                if (isSearchControlled) {
+                  onSearchValueChange?.(event.target.value);
+                  return;
+                }
+
+                setInternalSearchValue(event.target.value);
+              }}
               onKeyDown={(event) => {
                 event.stopPropagation();
               }}

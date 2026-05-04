@@ -145,11 +145,9 @@ const getDateOnlyString = (date: Date) => {
   return `${year}-${month}-${day}`;
 };
 
-const getStartOfDayString = (date: Date) => `${getDateOnlyString(date)} 00:00:00`;
-const getEndOfDayString = (date: Date) => `${getDateOnlyString(date)} 23:59:59`;
 const getDateTimeString = (date: Date, time: string, fallback: string) => {
-  const normalizedTime = /^([01]\d|2[0-3]):[0-5]\d$/.test(time) ? time : fallback;
-  return `${getDateOnlyString(date)} ${normalizedTime}:00`;
+  const normalizedTime = /^([01]\d|2[0-3]):[0-5]\d:[0-5]\d$/.test(time) ? time : fallback;
+  return `${getDateOnlyString(date)} ${normalizedTime}`;
 };
 /** Default created-date range: yesterday through today (inclusive). */
 const getDefaultCreatedFromDate = () => getDateOnlyString(new Date());
@@ -350,18 +348,29 @@ function DatePickerField({ label, value, onChange, onApply, onClose }: DatePicke
 
 function TimePickerField({ label, value, onChange }: TimePickerFieldProps) {
   const [open, setOpen] = useState(false);
-  const options = useMemo(
-    () =>
-      Array.from({ length: 24 * 4 }, (_, index) => {
-        const hours = String(Math.floor(index / 4)).padStart(2, '0');
-        const minutes = String((index % 4) * 15).padStart(2, '0');
-        return `${hours}:${minutes}`;
-      }),
-    [],
+  const [hours, minutes, seconds] = useMemo(() => {
+    const [h = '00', m = '00', sec = '00'] = value.split(':');
+    return [h.padStart(2, '0'), m.padStart(2, '0'), sec.padStart(2, '0')];
+  }, [value]);
+
+  const renderColumn = (max: number, selected: string, onPick: (next: string) => void) => (
+    <div className="max-h-56 w-11 space-y-1 overflow-y-auto pr-1">
+      {Array.from({ length: max }, (_, index) => String(index).padStart(2, '0')).map((item) => (
+        <Button
+          key={item}
+          type="button"
+          variant="ghost"
+          onClick={() => onPick(item)}
+          className={cn('h-7 w-full px-1 text-[11px]', selected === item && 'bg-accent font-semibold')}
+        >
+          {item}
+        </Button>
+      ))}
+    </div>
   );
 
   return (
-    <div className="flex min-w-[96px] flex-col gap-2">
+    <div className="flex min-w-[110px] flex-col gap-2">
       <span className="text-sm font-medium text-muted-foreground">{label}</span>
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
@@ -370,39 +379,28 @@ function TimePickerField({ label, value, onChange }: TimePickerFieldProps) {
             className="h-10 w-full justify-between px-2.5 text-xs font-medium"
             onClick={() => setOpen(true)}
           >
-            <span className="flex items-center gap-2">
+            <span className="flex items-center gap-1.5">
               <Clock3 className="h-3.5 w-3.5" />
               {value}
             </span>
             <ChevronDown className="h-3.5 w-3.5 opacity-80" />
           </Button>
         </PopoverTrigger>
-        <PopoverContent className="w-[110px] p-1" align="end" sideOffset={6}>
-          <div className="max-h-56 space-y-1 overflow-y-auto pr-1">
-            {options.map((time) => (
-              <Button
-                key={time}
-                type="button"
-                variant="ghost"
-                onClick={() => {
-                  onChange(time);
-                  setOpen(false);
-                }}
-                className={cn(
-                  'h-7 w-full justify-start gap-1.5 px-2 text-[11px]',
-                  value === time && 'bg-accent font-semibold',
-                )}
-              >
-                <Clock3 className="h-3 w-3" />
-                {time}
-              </Button>
-            ))}
+        <PopoverContent className="w-[170px] p-2" align="end" sideOffset={6}>
+          <div className="mb-2 grid grid-cols-3 gap-1 text-center text-[10px] text-muted-foreground">
+            <span>HH</span><span>MM</span><span>SS</span>
+          </div>
+          <div className="grid grid-cols-3 gap-1">
+            {renderColumn(24, hours, (nextHour) => onChange(`${nextHour}:${minutes}:${seconds}`))}
+            {renderColumn(60, minutes, (nextMinute) => onChange(`${hours}:${nextMinute}:${seconds}`))}
+            {renderColumn(60, seconds, (nextSecond) => onChange(`${hours}:${minutes}:${nextSecond}`))}
           </div>
         </PopoverContent>
       </Popover>
     </div>
   );
 }
+
 
 const PayinSummaryCards = memo(function PayinSummaryCards({
   summary,
@@ -1225,14 +1223,14 @@ export function AdminPayinPage() {
   const [createdToDate, setCreatedToDate] = useState(getDateOnlyString(new Date()));
   const [createdFromInput, setCreatedFromInput] = useState(getDefaultCreatedFromDate());
   const [createdToInput, setCreatedToInput] = useState(getDateOnlyString(new Date()));
-  const [createdFromTimeInput, setCreatedFromTimeInput] = useState('00:00');
-  const [createdToTimeInput, setCreatedToTimeInput] = useState('23:59');
+  const [createdFromTimeInput, setCreatedFromTimeInput] = useState('00:00:00');
+  const [createdToTimeInput, setCreatedToTimeInput] = useState('23:59:59');
   const [successFromDate, setSuccessFromDate] = useState('');
   const [successToDate, setSuccessToDate] = useState('');
   const [successFromInput, setSuccessFromInput] = useState('');
   const [successToInput, setSuccessToInput] = useState('');
-  const [successFromTimeInput, setSuccessFromTimeInput] = useState('00:00');
-  const [successToTimeInput, setSuccessToTimeInput] = useState('23:59');
+  const [successFromTimeInput, setSuccessFromTimeInput] = useState('00:00:00');
+  const [successToTimeInput, setSuccessToTimeInput] = useState('23:59:59');
   const [totalPages, setTotalPages] = useState(1);
   const [totalItems, setTotalItems] = useState<number | undefined>(0);
   const [isLoading, setIsLoading] = useState(false);
@@ -1287,14 +1285,14 @@ export function AdminPayinPage() {
     setCreatedToDate(today);
     setCreatedFromInput(defaultFromDate);
     setCreatedToInput(today);
-    setCreatedFromTimeInput('00:00');
-    setCreatedToTimeInput('23:59');
+    setCreatedFromTimeInput('00:00:00');
+    setCreatedToTimeInput('23:59:59');
     setSuccessFromDate('');
     setSuccessToDate('');
     setSuccessFromInput('');
     setSuccessToInput('');
-    setSuccessFromTimeInput('00:00');
-    setSuccessToTimeInput('23:59');
+    setSuccessFromTimeInput('00:00:00');
+    setSuccessToTimeInput('23:59:59');
     setPage(1);
   }, []);
 
@@ -1591,13 +1589,13 @@ export function AdminPayinPage() {
             ...(nextRrn.trim() ? { rrn: nextRrn.trim() } : {}),
             ...(nextIdSettlement.trim() ? { idSettlement: nextIdSettlement.trim() } : {}),
             ...(nextStatus !== 'all' ? { status: nextStatus } : {}),
-            createdFrom: getDateTimeString(new Date(nextCreatedFromDate), createdFromTimeInput, '00:00'),
-            createdTo: getDateTimeString(new Date(nextCreatedToDate), createdToTimeInput, '23:59'),
+            createdFrom: getDateTimeString(new Date(nextCreatedFromDate), createdFromTimeInput, '00:00:00'),
+            createdTo: getDateTimeString(new Date(nextCreatedToDate), createdToTimeInput, '23:59:59'),
             ...(nextSuccessFromDate.trim()
-              ? { successFrom: getDateTimeString(new Date(nextSuccessFromDate), successFromTimeInput, '00:00') }
+              ? { successFrom: getDateTimeString(new Date(nextSuccessFromDate), successFromTimeInput, '00:00:00') }
               : {}),
             ...(nextSuccessToDate.trim()
-              ? { successTo: getDateTimeString(new Date(nextSuccessToDate), successToTimeInput, '23:59') }
+              ? { successTo: getDateTimeString(new Date(nextSuccessToDate), successToTimeInput, '23:59:59') }
               : {}),
           },
           signal: activeController.signal,
@@ -1681,13 +1679,13 @@ export function AdminPayinPage() {
           ...(rrn.trim() ? { rrn: rrn.trim() } : {}),
           ...(idSettlement.trim() ? { idSettlement: idSettlement.trim() } : {}),
           ...(status !== 'all' ? { status } : {}),
-          createdFrom: getDateTimeString(new Date(createdFromDate), createdFromTimeInput, '00:00'),
-          createdTo: getDateTimeString(new Date(createdToDate), createdToTimeInput, '23:59'),
+          createdFrom: getDateTimeString(new Date(createdFromDate), createdFromTimeInput, '00:00:00'),
+          createdTo: getDateTimeString(new Date(createdToDate), createdToTimeInput, '23:59:59'),
           ...(successFromDate.trim()
-            ? { successFrom: getDateTimeString(new Date(successFromDate), successFromTimeInput, '00:00') }
+            ? { successFrom: getDateTimeString(new Date(successFromDate), successFromTimeInput, '00:00:00') }
             : {}),
           ...(successToDate.trim()
-            ? { successTo: getDateTimeString(new Date(successToDate), successToTimeInput, '23:59') }
+            ? { successTo: getDateTimeString(new Date(successToDate), successToTimeInput, '23:59:59') }
             : {}),
         }),
       });

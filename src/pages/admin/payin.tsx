@@ -33,6 +33,8 @@ import { ApiAuthError, apiFetch } from '@/lib/api';
 import { getStoredAuthToken, getStoredUserPermissions } from '@/lib/auth';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
+import { TimePicker } from 'antd';
+import dayjs from 'dayjs';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import {
@@ -43,6 +45,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { useLanguage } from '@/i18n/language-provider';
+import 'antd/dist/reset.css';
 
 interface PayinItem {
   id: number;
@@ -246,6 +249,7 @@ interface DatePickerFieldProps {
   onChange: (value: string) => void;
   onApply?: (value: string) => void;
   onClose?: () => void;
+  hideLabel?: boolean;
 }
 
 const parseDateValue = (value?: string) => {
@@ -254,7 +258,7 @@ const parseDateValue = (value?: string) => {
   return Number.isNaN(parsed.getTime()) ? undefined : parsed;
 };
 
-function DatePickerField({ label, value, onChange, onApply, onClose }: DatePickerFieldProps) {
+function DatePickerField({ label, value, onChange, onApply, onClose, hideLabel = false }: DatePickerFieldProps) {
   const selectedDate = useMemo(() => parseDateValue(value), [value]);
   const [open, setOpen] = useState(false);
   const didApplyRef = useRef(false);
@@ -262,7 +266,7 @@ function DatePickerField({ label, value, onChange, onApply, onClose }: DatePicke
 
   return (
     <div className="flex flex-col gap-2">
-      <span className="text-sm font-medium text-muted-foreground">{label}</span>
+      {!hideLabel && <span className="text-sm font-medium text-muted-foreground">{label}</span>}
       <Popover
         open={open}
         onOpenChange={(nextOpen) => {
@@ -285,7 +289,7 @@ function DatePickerField({ label, value, onChange, onApply, onClose }: DatePicke
           <Button
             variant="outline"
             className={cn(
-              'flex w-full items-center justify-between gap-2 text-left font-normal shadow-sm transition hover:shadow-sm focus-visible:ring-2 focus-visible:ring-offset-2 md:w-[220px]',
+              'flex w-full items-center justify-between gap-2 text-left font-normal shadow-sm transition hover:shadow-sm focus-visible:ring-2 focus-visible:ring-offset-2 ',
               !selectedDate && 'text-muted-foreground',
             )}
           >
@@ -326,6 +330,39 @@ function DatePickerField({ label, value, onChange, onApply, onClose }: DatePicke
           />
         </PopoverContent>
       </Popover>
+    </div>
+  );
+}
+
+
+interface DateTimeFilterFieldProps extends DatePickerFieldProps {
+  timeValue: string;
+}
+
+function DateTimeFilterField({ label, value, onChange, onApply, onClose, timeValue }: DateTimeFilterFieldProps) {
+  return (
+    <div className="flex flex-col gap-2">
+      <span className="text-sm font-medium text-muted-foreground">{label}</span>
+      <div className="flex w-full items-center gap-2">
+        <div className="flex-1">
+          <DatePickerField
+            label={label}
+            value={value}
+            onChange={onChange}
+            onApply={onApply}
+            onClose={onClose}
+            hideLabel
+          />
+        </div>
+        <TimePicker
+          value={dayjs(timeValue, 'HH:mm')}
+          format="HH:mm"
+          disabled
+          inputReadOnly
+          allowClear={false}
+          className="h-9 min-w-[96px] rounded-md border border-input bg-muted/40 text-foreground"
+        />
+      </div>
     </div>
   );
 }
@@ -807,19 +844,21 @@ const PayinFilters = memo(function PayinFilters({
               </div>
               <Separator />
               <div className="grid gap-4 sm:grid-cols-2">
-                <DatePickerField
+                <DateTimeFilterField
                   label={t('payin.filters.createdFrom')}
                   value={createdFromInput}
                   onChange={onCreatedFromChange}
                   onApply={(value) => onDatePickerApply(value, 'from')}
                   onClose={onDatePickerClose}
+                  timeValue="00:00"
                 />
-                <DatePickerField
+                <DateTimeFilterField
                   label={t('payin.filters.createdTo')}
                   value={createdToInput}
                   onChange={onCreatedToChange}
                   onApply={(value) => onDatePickerApply(value, 'to')}
                   onClose={onDatePickerClose}
+                  timeValue="23:59"
                 />
               </div>
               <div className="grid gap-4 sm:grid-cols-2">

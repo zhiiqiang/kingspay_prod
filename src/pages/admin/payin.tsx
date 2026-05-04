@@ -404,7 +404,7 @@ function TimePickerField({ label, value, onChange }: TimePickerFieldProps) {
             {renderColumn(24, hours, (nextHour) => setDraftValue(`${nextHour}:${minutes}:${seconds}`))}
             {renderColumn(60, minutes, (nextMinute) => setDraftValue(`${hours}:${nextMinute}:${seconds}`))}
             {renderColumn(60, seconds, (nextSecond) => setDraftValue(`${hours}:${minutes}:${nextSecond}`))}
-            <div className="flex h-full flex-col justify-between gap-2">
+            <div className="flex h-full flex-col justify-start gap-2">
               <Button
                 type="button"
                 size="sm"
@@ -1856,183 +1856,25 @@ export function AdminPayinPage() {
     ],
   );
 
-  const handleDatePickerApply = useCallback(
-    (nextValue: string, field: 'from' | 'to') => {
-      const nextPlatformTrxId = platformTrxIdRef.current?.value ?? platformTrxId;
-      const nextMerchantTrxId = merchantTrxIdRef.current?.value ?? merchantTrxId;
-      const nextPartnerTrxId = partnerTrxIdRef.current?.value ?? partnerTrxId;
-      const nextStoreName = storeNameRef.current?.value ?? storeName;
-      const nextNmid = nmidRef.current?.value ?? nmid;
-      const nextIdMerchant = idMerchantRef.current?.value ?? idMerchant;
-      const nextIdAgent = idAgentRef.current?.value ?? idAgent;
-      const nextRrn = rrnRef.current?.value ?? rrn;
-      const nextIdSettlement = idSettlementRef.current?.value ?? idSettlement;
-      triggerPayinSearch({
-        page: 1,
-        platformTrxId: nextPlatformTrxId,
-        merchantTrxId: nextMerchantTrxId,
-        partnerTrxId: nextPartnerTrxId,
-        storeName: nextStoreName,
-        nmid: nextNmid,
-        idMerchant: nextIdMerchant,
-        idAgent: nextIdAgent,
-        rrn: nextRrn,
-        idSettlement: nextIdSettlement,
-        status,
-        createdFromDate: field === 'from' ? nextValue : createdFromInput,
-        createdToDate: field === 'to' ? nextValue : createdToInput,
-        successFromDate: successFromInput,
-        successToDate: successToInput,
-      });
-    },
-    [
-      createdFromInput,
-      createdToInput,
-      idAgent,
-      idMerchant,
-      idSettlement,
-      merchantTrxId,
-      partnerTrxId,
-      platformTrxId,
-      rrn,
-      status,
-      successFromInput,
-      successToInput,
-      triggerPayinSearch,
-    ],
-  );
+  const handleDatePickerApply = useCallback(() => {
+    // Intentionally no background fetch on date apply.
+    // Filters are executed only when user clicks Search.
+  }, []);
 
   const handleDatePickerClose = useCallback(() => {
-    const nextPlatformTrxId = platformTrxIdRef.current?.value ?? platformTrxId;
-    const nextMerchantTrxId = merchantTrxIdRef.current?.value ?? merchantTrxId;
-    const nextPartnerTrxId = partnerTrxIdRef.current?.value ?? partnerTrxId;
-    const nextStoreName = storeNameRef.current?.value ?? storeName;
-    const nextNmid = nmidRef.current?.value ?? nmid;
-    const nextIdMerchant = idMerchantRef.current?.value ?? idMerchant;
-    const nextIdAgent = idAgentRef.current?.value ?? idAgent;
-    const nextRrn = rrnRef.current?.value ?? rrn;
-    const nextIdSettlement = idSettlementRef.current?.value ?? idSettlement;
-    triggerPayinSearch({
-      page: 1,
-      platformTrxId: nextPlatformTrxId,
-      merchantTrxId: nextMerchantTrxId,
-      partnerTrxId: nextPartnerTrxId,
-      storeName: nextStoreName,
-      nmid: nextNmid,
-      idMerchant: nextIdMerchant,
-      idAgent: nextIdAgent,
-      rrn: nextRrn,
-      idSettlement: nextIdSettlement,
-      status,
-      createdFromDate: createdFromInput,
-      createdToDate: createdToInput,
-      successFromDate: successFromInput,
-      successToDate: successToInput,
-    });
-  }, [
-    createdFromInput,
-    createdToInput,
-    idAgent,
-    idMerchant,
-    idSettlement,
-    merchantTrxId,
-    partnerTrxId,
-    platformTrxId,
-    rrn,
-    status,
-    successFromInput,
-    successToInput,
-    triggerPayinSearch,
-  ]);
+    // Intentionally no background fetch on date picker close.
+    // Filters are executed only when user clicks Search.
+  }, []);
 
-  const handleSuccessDatePickerApply = useCallback(
-    (nextValue: string, field: 'from' | 'to') => {
-      const nextPlatformTrxId = platformTrxIdRef.current?.value ?? platformTrxId;
-      const nextMerchantTrxId = merchantTrxIdRef.current?.value ?? merchantTrxId;
-      const nextPartnerTrxId = partnerTrxIdRef.current?.value ?? partnerTrxId;
-      const nextStoreName = storeNameRef.current?.value ?? storeName;
-      const nextNmid = nmidRef.current?.value ?? nmid;
-      const nextIdMerchant = idMerchantRef.current?.value ?? idMerchant;
-      const nextIdAgent = idAgentRef.current?.value ?? idAgent;
-      const nextRrn = rrnRef.current?.value ?? rrn;
-      const nextIdSettlement = idSettlementRef.current?.value ?? idSettlement;
-      triggerPayinSearch({
-        page: 1,
-        platformTrxId: nextPlatformTrxId,
-        merchantTrxId: nextMerchantTrxId,
-        partnerTrxId: nextPartnerTrxId,
-        storeName: nextStoreName,
-        nmid: nextNmid,
-        idMerchant: nextIdMerchant,
-        idAgent: nextIdAgent,
-        rrn: nextRrn,
-        idSettlement: nextIdSettlement,
-        status,
-        createdFromDate: createdFromInput,
-        createdToDate: createdToInput,
-        successFromDate: field === 'from' ? nextValue : successFromInput,
-        successToDate: field === 'to' ? nextValue : successToInput,
-      });
-    },
-    [
-      createdFromInput,
-      createdToInput,
-      idAgent,
-      idMerchant,
-      idSettlement,
-      merchantTrxId,
-      partnerTrxId,
-      platformTrxId,
-      rrn,
-      status,
-      successFromInput,
-      successToInput,
-      triggerPayinSearch,
-    ],
-  );
+  const handleSuccessDatePickerApply = useCallback(() => {
+    // Intentionally no background fetch on success date apply.
+    // Filters are executed only when user clicks Search.
+  }, []);
 
   const handleSuccessDatePickerClose = useCallback(() => {
-    const nextPlatformTrxId = platformTrxIdRef.current?.value ?? platformTrxId;
-    const nextMerchantTrxId = merchantTrxIdRef.current?.value ?? merchantTrxId;
-    const nextPartnerTrxId = partnerTrxIdRef.current?.value ?? partnerTrxId;
-    const nextStoreName = storeNameRef.current?.value ?? storeName;
-    const nextNmid = nmidRef.current?.value ?? nmid;
-    const nextIdMerchant = idMerchantRef.current?.value ?? idMerchant;
-    const nextIdAgent = idAgentRef.current?.value ?? idAgent;
-    const nextRrn = rrnRef.current?.value ?? rrn;
-    const nextIdSettlement = idSettlementRef.current?.value ?? idSettlement;
-    triggerPayinSearch({
-      page: 1,
-      platformTrxId: nextPlatformTrxId,
-      merchantTrxId: nextMerchantTrxId,
-      partnerTrxId: nextPartnerTrxId,
-      storeName: nextStoreName,
-      nmid: nextNmid,
-      idMerchant: nextIdMerchant,
-      idAgent: nextIdAgent,
-      rrn: nextRrn,
-      idSettlement: nextIdSettlement,
-      status,
-      createdFromDate: createdFromInput,
-      createdToDate: createdToInput,
-      successFromDate: successFromInput,
-      successToDate: successToInput,
-    });
-  }, [
-    createdFromInput,
-    createdToInput,
-    idAgent,
-    idMerchant,
-    idSettlement,
-    merchantTrxId,
-    partnerTrxId,
-    platformTrxId,
-    rrn,
-    status,
-    successFromInput,
-    successToInput,
-    triggerPayinSearch,
-  ]);
+    // Intentionally no background fetch on success date picker close.
+    // Filters are executed only when user clicks Search.
+  }, []);
 
   const handleRefresh = useCallback(async () => {
     if (!hasSearched) return;

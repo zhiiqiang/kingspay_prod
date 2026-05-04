@@ -69,6 +69,8 @@ export function AdminBankAccountPage() {
   const [formErrors, setFormErrors] = useState<{ bankCode?: string; accountNo?: string; accountName?: string }>({});
   const [bankOptions, setBankOptions] = useState<BankListItem[]>([]);
   const [isBankOptionsLoading, setIsBankOptionsLoading] = useState(false);
+  const [createBankSearch, setCreateBankSearch] = useState('');
+  const [editBankSearch, setEditBankSearch] = useState('');
 
   const pageOptions = useMemo(() => {
     const calculatedPages = Math.max(1, totalPages || Math.ceil(totalItems / limit) || 1);
@@ -87,6 +89,27 @@ export function AdminBankAccountPage() {
       },
     ];
   }, [bankOptions, editForm.bankCode]);
+
+
+  const filteredCreateBankOptions = useMemo(() => {
+    const keyword = createBankSearch.trim().toLowerCase();
+    if (!keyword) return bankOptions;
+    return bankOptions.filter((bank) => {
+      const code = bank.code.toLowerCase();
+      const name = bank.name.toLowerCase();
+      return code.includes(keyword) || name.includes(keyword);
+    });
+  }, [bankOptions, createBankSearch]);
+
+  const filteredEditBankOptions = useMemo(() => {
+    const keyword = editBankSearch.trim().toLowerCase();
+    if (!keyword) return editBankOptions;
+    return editBankOptions.filter((bank) => {
+      const code = bank.code.toLowerCase();
+      const name = bank.name.toLowerCase();
+      return code.includes(keyword) || name.includes(keyword);
+    });
+  }, [editBankOptions, editBankSearch]);
 
   const handleAuthError = useCallback((error: unknown) => {
     if (error instanceof ApiAuthError) {
@@ -173,6 +196,8 @@ export function AdminBankAccountPage() {
   const resetForms = () => {
     setCreateForm({ bankCode: '', accountNo: '', accountName: '' });
     setEditForm({ bankCode: '', accountNo: '', accountName: '' });
+    setCreateBankSearch('');
+    setEditBankSearch('');
     setFormErrors({});
   };
 
@@ -348,8 +373,13 @@ export function AdminBankAccountPage() {
                           }
                         />
                       </SelectTrigger>
-                      <SelectContent searchable searchPlaceholder={t('profit.withdraw.bankCodeSearchPlaceholder')}>
-                        {bankOptions.map((bank) => (
+                      <SelectContent
+                        searchable
+                        searchValue={createBankSearch}
+                        onSearchValueChange={setCreateBankSearch}
+                        searchPlaceholder={t('profit.withdraw.bankCodeSearchPlaceholder')}
+                      >
+                        {filteredCreateBankOptions.map((bank) => (
                           <SelectItem key={bank.id} value={bank.code}>
                             {bank.code} - {bank.name}
                           </SelectItem>
@@ -540,8 +570,13 @@ export function AdminBankAccountPage() {
                         placeholder={isBankOptionsLoading ? t('common.loading') : t('bankAccount.form.bankCodePlaceholder')}
                       />
                     </SelectTrigger>
-                    <SelectContent searchable searchPlaceholder={t('profit.withdraw.bankCodeSearchPlaceholder')}>
-                      {editBankOptions.map((bank) => (
+                    <SelectContent
+                      searchable
+                      searchValue={editBankSearch}
+                      onSearchValueChange={setEditBankSearch}
+                      searchPlaceholder={t('profit.withdraw.bankCodeSearchPlaceholder')}
+                    >
+                      {filteredEditBankOptions.map((bank) => (
                         <SelectItem key={bank.id} value={bank.code}>
                           {bank.code} - {bank.name}
                         </SelectItem>

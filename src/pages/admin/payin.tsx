@@ -147,6 +147,10 @@ const getDateOnlyString = (date: Date) => {
 
 const getStartOfDayString = (date: Date) => `${getDateOnlyString(date)} 00:00:00`;
 const getEndOfDayString = (date: Date) => `${getDateOnlyString(date)} 23:59:59`;
+const getDateTimeString = (date: Date, time: string, fallback: string) => {
+  const normalizedTime = /^([01]\d|2[0-3]):[0-5]\d$/.test(time) ? time : fallback;
+  return `${getDateOnlyString(date)} ${normalizedTime}:00`;
+};
 /** Default created-date range: yesterday through today (inclusive). */
 const getDefaultCreatedFromDate = () => getDateOnlyString(new Date());
 
@@ -209,6 +213,8 @@ interface PayinFiltersProps {
   nmidRef: React.MutableRefObject<HTMLInputElement | null>;
   createdFromInput: string;
   createdToInput: string;
+  createdFromTimeInput: string;
+  createdToTimeInput: string;
   successFromInput: string;
   successToInput: string;
   columnConfigs: PayinColumnConfig[];
@@ -226,6 +232,8 @@ interface PayinFiltersProps {
   onSuccessDatePickerClose: (value: string, field: 'from' | 'to') => void;
   onCreatedFromChange: (value: string) => void;
   onCreatedToChange: (value: string) => void;
+  onCreatedFromTimeChange: (value: string) => void;
+  onCreatedToTimeChange: (value: string) => void;
   onSuccessFromChange: (value: string) => void;
   onSuccessToChange: (value: string) => void;
   onToggleColumnVisibility: (columnId: PayinColumnId, isVisible: boolean) => void;
@@ -421,6 +429,8 @@ const PayinFilters = memo(function PayinFilters({
   idSettlementRef,
   createdFromInput,
   createdToInput,
+  createdFromTimeInput,
+  createdToTimeInput,
   successFromInput,
   successToInput,
   columnConfigs,
@@ -438,6 +448,8 @@ const PayinFilters = memo(function PayinFilters({
   onSuccessDatePickerClose,
   onCreatedFromChange,
   onCreatedToChange,
+  onCreatedFromTimeChange,
+  onCreatedToTimeChange,
   onSuccessFromChange,
   onSuccessToChange,
   onToggleColumnVisibility,
@@ -497,6 +509,8 @@ const PayinFilters = memo(function PayinFilters({
     status,
     createdFromInput,
     createdToInput,
+    createdFromTimeInput,
+    createdToTimeInput,
     successFromInput,
     successToInput,
   });
@@ -547,6 +561,8 @@ const PayinFilters = memo(function PayinFilters({
     setStatusDraft(snapshot.status);
     onCreatedFromChange(snapshot.createdFromInput);
     onCreatedToChange(snapshot.createdToInput);
+    onCreatedFromTimeChange(snapshot.createdFromTimeInput);
+    onCreatedToTimeChange(snapshot.createdToTimeInput);
     onSuccessFromChange(snapshot.successFromInput);
     onSuccessToChange(snapshot.successToInput);
   }, [
@@ -556,6 +572,8 @@ const PayinFilters = memo(function PayinFilters({
     merchantTrxIdRef,
     onCreatedFromChange,
     onCreatedToChange,
+    onCreatedFromTimeChange,
+    onCreatedToTimeChange,
     onSuccessFromChange,
     onSuccessToChange,
     partnerTrxIdRef,
@@ -585,6 +603,8 @@ const PayinFilters = memo(function PayinFilters({
           status,
           createdFromInput,
           createdToInput,
+          createdFromTimeInput,
+          createdToTimeInput,
           successFromInput,
           successToInput,
         };
@@ -598,6 +618,8 @@ const PayinFilters = memo(function PayinFilters({
     [
       createdFromInput,
       createdToInput,
+      createdFromTimeInput,
+      createdToTimeInput,
       idAgent,
       idAgentRef,
       idMerchant,
@@ -821,6 +843,26 @@ const PayinFilters = memo(function PayinFilters({
                   onApply={(value) => onDatePickerApply(value, 'to')}
                   onClose={onDatePickerClose}
                 />
+              </div>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="flex w-full flex-col gap-2">
+                  <Label htmlFor="payin-filter-created-from-time">From Time</Label>
+                  <Input
+                    id="payin-filter-created-from-time"
+                    type="time"
+                    value={createdFromTimeInput}
+                    onChange={(event) => onCreatedFromTimeChange(event.target.value)}
+                  />
+                </div>
+                <div className="flex w-full flex-col gap-2">
+                  <Label htmlFor="payin-filter-created-to-time">To Time</Label>
+                  <Input
+                    id="payin-filter-created-to-time"
+                    type="time"
+                    value={createdToTimeInput}
+                    onChange={(event) => onCreatedToTimeChange(event.target.value)}
+                  />
+                </div>
               </div>
               <div className="grid gap-4 sm:grid-cols-2">
                 <DatePickerField
@@ -1111,6 +1153,8 @@ export function AdminPayinPage() {
   const [createdToDate, setCreatedToDate] = useState(getDateOnlyString(new Date()));
   const [createdFromInput, setCreatedFromInput] = useState(getDefaultCreatedFromDate());
   const [createdToInput, setCreatedToInput] = useState(getDateOnlyString(new Date()));
+  const [createdFromTimeInput, setCreatedFromTimeInput] = useState('00:00');
+  const [createdToTimeInput, setCreatedToTimeInput] = useState('23:59');
   const [successFromDate, setSuccessFromDate] = useState('');
   const [successToDate, setSuccessToDate] = useState('');
   const [successFromInput, setSuccessFromInput] = useState('');
@@ -1169,6 +1213,8 @@ export function AdminPayinPage() {
     setCreatedToDate(today);
     setCreatedFromInput(defaultFromDate);
     setCreatedToInput(today);
+    setCreatedFromTimeInput('00:00');
+    setCreatedToTimeInput('23:59');
     setSuccessFromDate('');
     setSuccessToDate('');
     setSuccessFromInput('');
@@ -1469,8 +1515,8 @@ export function AdminPayinPage() {
             ...(nextRrn.trim() ? { rrn: nextRrn.trim() } : {}),
             ...(nextIdSettlement.trim() ? { idSettlement: nextIdSettlement.trim() } : {}),
             ...(nextStatus !== 'all' ? { status: nextStatus } : {}),
-            createdFrom: getStartOfDayString(new Date(nextCreatedFromDate)),
-            createdTo: getEndOfDayString(new Date(nextCreatedToDate)),
+            createdFrom: getDateTimeString(new Date(nextCreatedFromDate), createdFromTimeInput, '00:00'),
+            createdTo: getDateTimeString(new Date(nextCreatedToDate), createdToTimeInput, '23:59'),
             ...(nextSuccessFromDate.trim()
               ? { successFrom: getStartOfDayString(new Date(nextSuccessFromDate)) }
               : {}),
@@ -1553,8 +1599,8 @@ export function AdminPayinPage() {
           ...(rrn.trim() ? { rrn: rrn.trim() } : {}),
           ...(idSettlement.trim() ? { idSettlement: idSettlement.trim() } : {}),
           ...(status !== 'all' ? { status } : {}),
-          createdFrom: getStartOfDayString(new Date(createdFromDate)),
-          createdTo: getEndOfDayString(new Date(createdToDate)),
+          createdFrom: getDateTimeString(new Date(createdFromDate), createdFromTimeInput, '00:00'),
+          createdTo: getDateTimeString(new Date(createdToDate), createdToTimeInput, '23:59'),
           ...(successFromDate.trim()
             ? { successFrom: getStartOfDayString(new Date(successFromDate)) }
             : {}),
@@ -2057,6 +2103,8 @@ export function AdminPayinPage() {
           idSettlementRef={idSettlementRef}
           createdFromInput={createdFromInput}
           createdToInput={createdToInput}
+          createdFromTimeInput={createdFromTimeInput}
+          createdToTimeInput={createdToTimeInput}
           successFromInput={successFromInput}
           successToInput={successToInput}
           columnConfigs={columnConfigs}
@@ -2074,6 +2122,8 @@ export function AdminPayinPage() {
           onSuccessDatePickerClose={handleSuccessDatePickerClose}
           onCreatedFromChange={setCreatedFromInput}
           onCreatedToChange={setCreatedToInput}
+          onCreatedFromTimeChange={setCreatedFromTimeInput}
+          onCreatedToTimeChange={setCreatedToTimeInput}
           onSuccessFromChange={setSuccessFromInput}
           onSuccessToChange={setSuccessToInput}
           onToggleColumnVisibility={toggleColumnVisibility}

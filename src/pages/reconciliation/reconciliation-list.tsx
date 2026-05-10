@@ -45,6 +45,7 @@ interface ReconciliationItem {
   approved_at?: string;
   rejected_by?: string | null;
   rejected_at?: string | null;
+  created_at?: string | null;
   reason?: string | null;
 }
 
@@ -73,6 +74,7 @@ type ReconciliationColumnId =
   | 'approved_at'
   | 'rejected_by'
   | 'rejected_at'
+  | 'created_at'
   | 'reason'
   | 'action';
 
@@ -388,6 +390,13 @@ export function ReconciliationListPage() {
         headerClassName: 'w-[180px] whitespace-nowrap',
         cellClassName: 'whitespace-nowrap',
         render: (item) => formatOptionalValue(item.rejected_at),
+      },
+      {
+        id: 'created_at',
+        label: t('reconciliation.table.createdAt'),
+        headerClassName: 'w-[180px] whitespace-nowrap',
+        cellClassName: 'whitespace-nowrap',
+        render: (item) => formatOptionalValue(item.created_at),
       },
       {
         id: 'reason',

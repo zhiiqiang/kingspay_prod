@@ -1001,8 +1001,8 @@ const PayinFilters = memo(function PayinFilters({
             )}
           </Button>
         )}
-        <div className="flex w-full flex-col gap-2 md:ml-auto md:w-auto md:flex-row md:items-end">
-          <div className="grid w-full gap-2 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="flex w-full flex-col gap-2 border-t border-border/60 pt-2 md:mt-1 md:flex-row md:items-end">
+          <div className="grid w-full gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             <div className="flex w-full min-w-[180px] flex-col gap-2">
               <Label htmlFor="payin-quick-platform-trx-id">{t('payin.filters.platformTrxId')}</Label>
               <Input
@@ -1035,7 +1035,7 @@ const PayinFilters = memo(function PayinFilters({
             </div>
           </div>
           <Button
-            className="w-full bg-primary text-white hover:bg-primary/90 active:bg-primary/80 md:w-auto"
+            className="w-full bg-primary text-white hover:bg-primary/90 active:bg-primary/80 md:w-auto md:self-end"
             onClick={() => onSearch({ status: statusDraft })}
           >
             {t('common.search')}

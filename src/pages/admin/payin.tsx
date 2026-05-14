@@ -1034,20 +1034,22 @@ const PayinFilters = memo(function PayinFilters({
               />
             </div>
           </div>
-          <Button
-            className="w-full bg-primary text-white hover:bg-primary/90 active:bg-primary/80 md:w-auto md:self-end"
-            onClick={() => onSearch({ status: statusDraft })}
-          >
-            {t('common.search')}
-          </Button>
+          <div className="flex items-end gap-2 self-end">
+            <Button
+              className="bg-primary text-white hover:bg-primary/90 active:bg-primary/80"
+              onClick={() => onSearch({ status: statusDraft })}
+            >
+              {t('common.search')}
+            </Button>
+            <Button
+              variant="outline"
+              onClick={onReset}
+              className="transition-colors hover:bg-transparent hover:text-foreground hover:border-input active:bg-muted/60"
+            >
+              {t('common.reset')}
+            </Button>
+          </div>
         </div>
-        <Button
-          variant="outline"
-          onClick={onReset}
-          className="transition-colors hover:bg-transparent hover:text-foreground hover:border-input active:bg-muted/60"
-        >
-          {t('common.reset')}
-        </Button>
       </div>
     </CardHeader>
   );

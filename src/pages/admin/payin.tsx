@@ -453,33 +453,33 @@ const PayinSummaryCards = memo(function PayinSummaryCards({
         label: t('payin.summary.totalAmount'),
         value: formatAmount(summary?.sumAmount),
       },
-      {
-        key: 'channel',
-        label: t('payin.summary.channelFee'),
-        value: formatAmount(summary?.sumBiayaChannel),
-      },
-      {
-        key: 'agent',
-        label: t('payin.summary.agentFee'),
-        value: formatAmount(summary?.sumBiayaAgent),
-      },
-      {
-        key: 'profit',
-        label: t('payin.summary.profit'),
-        value: formatAmount(summary?.sumProfit),
-      },
-      {
-        key: 'netAmount',
-        label: t('payin.summary.netAmount'),
-        value: formatAmount(summary?.sumNetAmount),
-      },
+      // {
+      //   key: 'channel',
+      //   label: t('payin.summary.channelFee'),
+      //   value: formatAmount(summary?.sumBiayaChannel),
+      // },
+      // {
+      //   key: 'agent',
+      //   label: t('payin.summary.agentFee'),
+      //   value: formatAmount(summary?.sumBiayaAgent),
+      // },
+      // {
+      //   key: 'profit',
+      //   label: t('payin.summary.profit'),
+      //   value: formatAmount(summary?.sumProfit),
+      // },
+      // {
+      //   key: 'netAmount',
+      //   label: t('payin.summary.netAmount'),
+      //   value: formatAmount(summary?.sumNetAmount),
+      // },
     ],
     [
       summary?.sumAmount,
-      summary?.sumBiayaAgent,
-      summary?.sumBiayaChannel,
-      summary?.sumNetAmount,
-      summary?.sumProfit,
+      // summary?.sumBiayaAgent,
+      // summary?.sumBiayaChannel,
+      // summary?.sumNetAmount,
+      // summary?.sumProfit,
       t,
     ],
   );

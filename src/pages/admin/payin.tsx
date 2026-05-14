@@ -808,16 +808,6 @@ const PayinFilters = memo(function PayinFilters({
             <div className="max-h-[70vh] space-y-4 overflow-y-auto pr-1">
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 <div className="flex w-full flex-col gap-2">
-                  <Label htmlFor="payin-filter-platform-trx-id">{t('payin.filters.platformTrxId')}</Label>
-                  <Input
-                    key={`platform-${filterResetKey}`}
-                    id="payin-filter-platform-trx-id"
-                    defaultValue={platformTrxId}
-                    ref={platformTrxIdRef}
-                    placeholder={t('payin.filters.platformTrxIdPlaceholder')}
-                  />
-                </div>
-                <div className="flex w-full flex-col gap-2">
                   <Label htmlFor="payin-filter-merchant-trx-id">{t('payin.filters.merchantTrxId')}</Label>
                   <Input
                     key={`merchant-trx-${filterResetKey}`}
@@ -825,16 +815,6 @@ const PayinFilters = memo(function PayinFilters({
                     defaultValue={merchantTrxId}
                     ref={merchantTrxIdRef}
                     placeholder={t('payin.filters.merchantTrxIdPlaceholder')}
-                  />
-                </div>
-                <div className="flex w-full flex-col gap-2">
-                  <Label htmlFor="payin-filter-partner-trx-id">{t('payin.filters.partnerTrxId')}</Label>
-                  <Input
-                    key={`partner-trx-${filterResetKey}`}
-                    id="payin-filter-partner-trx-id"
-                    defaultValue={partnerTrxId}
-                    ref={partnerTrxIdRef}
-                    placeholder={t('payin.filters.partnerTrxIdPlaceholder')}
                   />
                 </div>
                 <div className="flex w-full flex-col gap-2">
@@ -929,16 +909,6 @@ const PayinFilters = memo(function PayinFilters({
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="flex w-full flex-col gap-2">
-                  <Label htmlFor="payin-filter-rrn">{t('payin.filters.rrn')}</Label>
-                  <Input
-                    key={`rrn-${filterResetKey}`}
-                    id="payin-filter-rrn"
-                    defaultValue={rrn}
-                    ref={rrnRef}
-                    placeholder={t('payin.filters.rrnPlaceholder')}
-                  />
-                </div>
               </div>
               <Separator />
               <div className="grid gap-4 sm:grid-cols-2">
@@ -1031,6 +1001,46 @@ const PayinFilters = memo(function PayinFilters({
             )}
           </Button>
         )}
+        <div className="flex w-full flex-col gap-2 md:ml-auto md:w-auto md:flex-row md:items-end">
+          <div className="grid w-full gap-2 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="flex w-full min-w-[180px] flex-col gap-2">
+              <Label htmlFor="payin-quick-platform-trx-id">{t('payin.filters.platformTrxId')}</Label>
+              <Input
+                key={`quick-platform-${filterResetKey}`}
+                id="payin-quick-platform-trx-id"
+                defaultValue={platformTrxId}
+                ref={platformTrxIdRef}
+                placeholder={t('payin.filters.platformTrxIdPlaceholder')}
+              />
+            </div>
+            <div className="flex w-full min-w-[180px] flex-col gap-2">
+              <Label htmlFor="payin-quick-partner-trx-id">{t('payin.filters.partnerTrxId')}</Label>
+              <Input
+                key={`quick-partner-${filterResetKey}`}
+                id="payin-quick-partner-trx-id"
+                defaultValue={partnerTrxId}
+                ref={partnerTrxIdRef}
+                placeholder={t('payin.filters.partnerTrxIdPlaceholder')}
+              />
+            </div>
+            <div className="flex w-full min-w-[180px] flex-col gap-2">
+              <Label htmlFor="payin-quick-rrn">{t('payin.filters.rrn')}</Label>
+              <Input
+                key={`quick-rrn-${filterResetKey}`}
+                id="payin-quick-rrn"
+                defaultValue={rrn}
+                ref={rrnRef}
+                placeholder={t('payin.filters.rrnPlaceholder')}
+              />
+            </div>
+          </div>
+          <Button
+            className="w-full bg-primary text-white hover:bg-primary/90 active:bg-primary/80 md:w-auto"
+            onClick={() => onSearch({ status: statusDraft })}
+          >
+            {t('common.search')}
+          </Button>
+        </div>
         <Button
           variant="outline"
           onClick={onReset}

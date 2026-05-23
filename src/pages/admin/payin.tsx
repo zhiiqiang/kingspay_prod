@@ -110,6 +110,8 @@ interface AgentFilterListResponse {
 const formatAmount = (amount?: number) =>
   typeof amount === 'number' ? amount.toLocaleString('id-ID', { style: 'currency', currency: 'IDR' }) : '-';
 
+const formatNumber = (value?: number) => (typeof value === 'number' ? value.toLocaleString('id-ID') : '-');
+
 const formatRate = (feePercentage?: number, feeFixed?: number) => {
   if (feePercentage === undefined && feeFixed === undefined) {
     return '-';
@@ -439,9 +441,11 @@ function TimePickerField({ label, value, onChange }: TimePickerFieldProps) {
 
 const PayinSummaryCards = memo(function PayinSummaryCards({
   summary,
+  totalTransactions,
   isLoading,
 }: {
   summary: PayinSummary | null;
+  totalTransactions: number | undefined;
   isLoading: boolean;
 }) {
   const { t } = useLanguage();
@@ -449,9 +453,16 @@ const PayinSummaryCards = memo(function PayinSummaryCards({
   const summaryItems = useMemo(
     () => [
       {
+        key: 'transactions',
+        label: t('payin.summary.totalTransactions'),
+        value: formatNumber(totalTransactions ?? 0),
+        unit: t('payin.summary.transactionsUnit'),
+      },
+      {
         key: 'amount',
         label: t('payin.summary.totalAmount'),
         value: formatAmount(summary?.sumAmount),
+        unit: 'IDR',
       },
       // {
       //   key: 'channel',
@@ -476,6 +487,7 @@ const PayinSummaryCards = memo(function PayinSummaryCards({
     ],
     [
       summary?.sumAmount,
+      totalTransactions,
       // summary?.sumBiayaAgent,
       // summary?.sumBiayaChannel,
       // summary?.sumNetAmount,
@@ -492,7 +504,7 @@ const PayinSummaryCards = memo(function PayinSummaryCards({
             <div className="flex items-center justify-between text-sm text-muted-foreground">
               <span className="font-medium">{item.label}</span>
               <span className="rounded-full bg-primary/10 px-2 py-1 text-[10px] font-semibold uppercase text-primary">
-                IDR
+                {item.unit}
               </span>
             </div>
             <div className="max-w-full break-words text-2xl font-semibold text-foreground">
@@ -2062,7 +2074,7 @@ export function AdminPayinPage() {
         <h1 className="text-3xl font-semibold leading-tight">{t('payin.pageTitle')}</h1>
       </div>
 
-      <PayinSummaryCards summary={summary} isLoading={isLoading} />
+      <PayinSummaryCards summary={summary} totalTransactions={totalItems} isLoading={isLoading} />
       <div className="flex justify-start">
         <div className="inline-flex w-fit items-center gap-2 rounded-full border bg-primary bg-primary/90 px-3 py-1.5 text-xs font-medium text-white">
           <Info className="h-4 w-4" aria-hidden />

@@ -453,33 +453,33 @@ const PayinSummaryCards = memo(function PayinSummaryCards({
         label: t('payin.summary.totalAmount'),
         value: formatAmount(summary?.sumAmount),
       },
-      {
-        key: 'channel',
-        label: t('payin.summary.channelFee'),
-        value: formatAmount(summary?.sumBiayaChannel),
-      },
-      {
-        key: 'agent',
-        label: t('payin.summary.agentFee'),
-        value: formatAmount(summary?.sumBiayaAgent),
-      },
-      {
-        key: 'profit',
-        label: t('payin.summary.profit'),
-        value: formatAmount(summary?.sumProfit),
-      },
-      {
-        key: 'netAmount',
-        label: t('payin.summary.netAmount'),
-        value: formatAmount(summary?.sumNetAmount),
-      },
+      // {
+      //   key: 'channel',
+      //   label: t('payin.summary.channelFee'),
+      //   value: formatAmount(summary?.sumBiayaChannel),
+      // },
+      // {
+      //   key: 'agent',
+      //   label: t('payin.summary.agentFee'),
+      //   value: formatAmount(summary?.sumBiayaAgent),
+      // },
+      // {
+      //   key: 'profit',
+      //   label: t('payin.summary.profit'),
+      //   value: formatAmount(summary?.sumProfit),
+      // },
+      // {
+      //   key: 'netAmount',
+      //   label: t('payin.summary.netAmount'),
+      //   value: formatAmount(summary?.sumNetAmount),
+      // },
     ],
     [
       summary?.sumAmount,
-      summary?.sumBiayaAgent,
-      summary?.sumBiayaChannel,
-      summary?.sumNetAmount,
-      summary?.sumProfit,
+      // summary?.sumBiayaAgent,
+      // summary?.sumBiayaChannel,
+      // summary?.sumNetAmount,
+      // summary?.sumProfit,
       t,
     ],
   );
@@ -808,16 +808,6 @@ const PayinFilters = memo(function PayinFilters({
             <div className="max-h-[70vh] space-y-4 overflow-y-auto pr-1">
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 <div className="flex w-full flex-col gap-2">
-                  <Label htmlFor="payin-filter-platform-trx-id">{t('payin.filters.platformTrxId')}</Label>
-                  <Input
-                    key={`platform-${filterResetKey}`}
-                    id="payin-filter-platform-trx-id"
-                    defaultValue={platformTrxId}
-                    ref={platformTrxIdRef}
-                    placeholder={t('payin.filters.platformTrxIdPlaceholder')}
-                  />
-                </div>
-                <div className="flex w-full flex-col gap-2">
                   <Label htmlFor="payin-filter-merchant-trx-id">{t('payin.filters.merchantTrxId')}</Label>
                   <Input
                     key={`merchant-trx-${filterResetKey}`}
@@ -825,16 +815,6 @@ const PayinFilters = memo(function PayinFilters({
                     defaultValue={merchantTrxId}
                     ref={merchantTrxIdRef}
                     placeholder={t('payin.filters.merchantTrxIdPlaceholder')}
-                  />
-                </div>
-                <div className="flex w-full flex-col gap-2">
-                  <Label htmlFor="payin-filter-partner-trx-id">{t('payin.filters.partnerTrxId')}</Label>
-                  <Input
-                    key={`partner-trx-${filterResetKey}`}
-                    id="payin-filter-partner-trx-id"
-                    defaultValue={partnerTrxId}
-                    ref={partnerTrxIdRef}
-                    placeholder={t('payin.filters.partnerTrxIdPlaceholder')}
                   />
                 </div>
                 <div className="flex w-full flex-col gap-2">
@@ -929,16 +909,6 @@ const PayinFilters = memo(function PayinFilters({
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="flex w-full flex-col gap-2">
-                  <Label htmlFor="payin-filter-rrn">{t('payin.filters.rrn')}</Label>
-                  <Input
-                    key={`rrn-${filterResetKey}`}
-                    id="payin-filter-rrn"
-                    defaultValue={rrn}
-                    ref={rrnRef}
-                    placeholder={t('payin.filters.rrnPlaceholder')}
-                  />
-                </div>
               </div>
               <Separator />
               <div className="grid gap-4 sm:grid-cols-2">
@@ -1031,13 +1001,55 @@ const PayinFilters = memo(function PayinFilters({
             )}
           </Button>
         )}
-        <Button
-          variant="outline"
-          onClick={onReset}
-          className="transition-colors hover:bg-transparent hover:text-foreground hover:border-input active:bg-muted/60"
-        >
-          {t('common.reset')}
-        </Button>
+        <div className="flex w-full flex-col gap-2 border-t border-border/60 pt-2 md:mt-1 md:flex-row md:items-end">
+          <div className="grid w-full gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            <div className="flex w-full min-w-[180px] flex-col gap-2">
+              <Label htmlFor="payin-quick-platform-trx-id">{t('payin.filters.platformTrxId')}</Label>
+              <Input
+                key={`quick-platform-${filterResetKey}`}
+                id="payin-quick-platform-trx-id"
+                defaultValue={platformTrxId}
+                ref={platformTrxIdRef}
+                placeholder={t('payin.filters.platformTrxIdPlaceholder')}
+              />
+            </div>
+            <div className="flex w-full min-w-[180px] flex-col gap-2">
+              <Label htmlFor="payin-quick-partner-trx-id">{t('payin.filters.partnerTrxId')}</Label>
+              <Input
+                key={`quick-partner-${filterResetKey}`}
+                id="payin-quick-partner-trx-id"
+                defaultValue={partnerTrxId}
+                ref={partnerTrxIdRef}
+                placeholder={t('payin.filters.partnerTrxIdPlaceholder')}
+              />
+            </div>
+            <div className="flex w-full min-w-[180px] flex-col gap-2">
+              <Label htmlFor="payin-quick-rrn">{t('payin.filters.rrn')}</Label>
+              <Input
+                key={`quick-rrn-${filterResetKey}`}
+                id="payin-quick-rrn"
+                defaultValue={rrn}
+                ref={rrnRef}
+                placeholder={t('payin.filters.rrnPlaceholder')}
+              />
+            </div>
+          </div>
+          <div className="flex items-end gap-2 self-end">
+            <Button
+              className="bg-primary text-white hover:bg-primary/90 active:bg-primary/80"
+              onClick={() => onSearch({ status: statusDraft })}
+            >
+              {t('common.search')}
+            </Button>
+            <Button
+              variant="outline"
+              onClick={onReset}
+              className="transition-colors hover:bg-transparent hover:text-foreground hover:border-input active:bg-muted/60"
+            >
+              {t('common.reset')}
+            </Button>
+          </div>
+        </div>
       </div>
     </CardHeader>
   );

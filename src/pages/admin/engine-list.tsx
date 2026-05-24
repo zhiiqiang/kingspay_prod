@@ -668,9 +668,21 @@ export function AdminEngineListPage() {
 
   const handleOpenClearAuthDialog = useCallback((merchant: MerchantItem) => {
     if (!merchant?.id) return;
+    setConfigAction('menu');
+    setClearAuthPassword('');
+    setShowClearAuthPassword(false);
     setClearAuthDialogOpen(true);
     setClearAuthMerchantId(merchant.id);
     setClearAuthMerchantName(merchant.name ?? '-');
+  }, []);
+
+  const handleOpenClearAuthForm = useCallback(() => {
+    setClearAuthPassword('');
+    setShowClearAuthPassword(false);
+    setConfigAction('clear-auth');
+  }, []);
+
+  const handleBackToConfigMenu = useCallback(() => {
     setClearAuthPassword('');
     setShowClearAuthPassword(false);
     setConfigAction('menu');
@@ -1825,7 +1837,7 @@ export function AdminEngineListPage() {
               <div className="grid gap-2">
                 <Button
                   className="w-full bg-primary text-white hover:bg-primary/90 sm:w-auto sm:justify-self-start"
-                  onClick={() => setConfigAction('clear-auth')}
+                  onClick={handleOpenClearAuthForm}
                 >
                   {t('merchants.config.actions.clearAuth')}
                 </Button>
@@ -1862,7 +1874,7 @@ export function AdminEngineListPage() {
               </Button>
             ) : (
               <>
-                <Button variant="outline" onClick={() => setConfigAction('menu')} disabled={isClearingAuth}>
+                <Button variant="outline" onClick={handleBackToConfigMenu} disabled={isClearingAuth}>
                   {t('merchants.config.back')}
                 </Button>
                 <Button

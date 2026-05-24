@@ -230,6 +230,13 @@ export function AdminEngineListPage() {
   const tableScrollRef = useRef<HTMLDivElement | null>(null);
   const [isSavingBalance, setIsSavingBalance] = useState(false);
   const [showBalancePassword, setShowBalancePassword] = useState(false);
+  const [clearAuthDialogOpen, setClearAuthDialogOpen] = useState(false);
+  const [clearAuthMerchantId, setClearAuthMerchantId] = useState<number | string | null>(null);
+  const [clearAuthMerchantName, setClearAuthMerchantName] = useState('');
+  const [clearAuthPassword, setClearAuthPassword] = useState('');
+  const [showClearAuthPassword, setShowClearAuthPassword] = useState(false);
+  const [isClearingAuth, setIsClearingAuth] = useState(false);
+  const [configAction, setConfigAction] = useState<'menu' | 'clear-auth'>('menu');
   const [channelDialogOpen, setChannelDialogOpen] = useState(false);
   const [channelMerchantId, setChannelMerchantId] = useState<number | string | null>(null);
   const [channelMerchantName, setChannelMerchantName] = useState('');
@@ -240,6 +247,7 @@ export function AdminEngineListPage() {
   const permissions = useMemo(() => new Set(getStoredUserPermissions()), []);
   const canTopup = permissions.has('merchant:topup');
   const canDeduct = permissions.has('merchant:deduct');
+  const canUpdateMerchant = permissions.has('merchant:update');
 
   const formatMessage = useCallback(
     (key: string, values: Record<string, string | number>) =>
@@ -646,6 +654,56 @@ export function AdminEngineListPage() {
     }
     setChannelDialogOpen(open);
   };
+
+  const handleClearAuthDialogChange = (open: boolean) => {
+    if (!open) {
+      setClearAuthMerchantId(null);
+      setClearAuthMerchantName('');
+      setClearAuthPassword('');
+      setShowClearAuthPassword(false);
+      setConfigAction('menu');
+    }
+    setClearAuthDialogOpen(open);
+  };
+
+  const handleOpenClearAuthDialog = useCallback((merchant: MerchantItem) => {
+    if (!merchant?.id) return;
+    setConfigAction('menu');
+    setClearAuthPassword('');
+    setShowClearAuthPassword(false);
+    setClearAuthDialogOpen(true);
+    setClearAuthMerchantId(merchant.id);
+    setClearAuthMerchantName(merchant.name ?? '-');
+  }, []);
+
+  const handleOpenClearAuthForm = useCallback(() => {
+    setClearAuthPassword('');
+    setShowClearAuthPassword(false);
+    setConfigAction('clear-auth');
+  }, []);
+
+  const handleBackToConfigMenu = useCallback(() => {
+    setClearAuthPassword('');
+    setShowClearAuthPassword(false);
+    setConfigAction('menu');
+  }, []);
+
+  const handleClearAuth = useCallback(async () => {
+    if (!clearAuthMerchantId || !clearAuthPassword.trim()) return;
+    setIsClearingAuth(true);
+    try {
+      const response = await apiFetch<{ status: boolean; message?: string }>(`merchant/${clearAuthMerchantId}/clear-auth`, {
+        method: 'POST',
+        body: { password: clearAuthPassword.trim() },
+      });
+      toast.success(response.message ?? t('merchants.clearAuth.toast.success'));
+      handleClearAuthDialogChange(false);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : t('merchants.clearAuth.toast.error'));
+    } finally {
+      setIsClearingAuth(false);
+    }
+  }, [clearAuthMerchantId, clearAuthPassword, t]);
 
   const handleOpenChannelDialog = useCallback(async (merchant: MerchantItem) => {
     if (!merchant?.id) return;
@@ -1125,6 +1183,16 @@ export function AdminEngineListPage() {
             >
               {t('common.edit')}
             </Button>
+            {canUpdateMerchant && (
+              <Button
+                size="sm"
+                className="bg-primary text-white hover:bg-primary/90"
+                onClick={() => handleOpenClearAuthDialog(merchant)}
+                disabled={isClearingAuth}
+              >
+                {t('merchants.actions.config')}
+              </Button>
+            )}
           </div>
         ),
       },
@@ -1132,8 +1200,11 @@ export function AdminEngineListPage() {
     [
       canDeduct,
       canTopup,
+      canUpdateMerchant,
       handleOpenBalanceDialog,
+      handleOpenClearAuthDialog,
       handleOpenEditDialog,
+      isClearingAuth,
       isLoadingMerchantDetail,
       isSavingBalance,
       statusBadgeVariant,
@@ -1744,6 +1815,77 @@ export function AdminEngineListPage() {
             >
               {balanceAction === 'topup' ? t('merchants.balance.topup.action') : t('merchants.balance.deduct.action')}
             </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      <Dialog open={clearAuthDialogOpen} onOpenChange={handleClearAuthDialogChange}>
+        <DialogContent className="sm:max-w-[420px]">
+          <DialogHeader>
+            <DialogTitle>
+              {configAction === 'menu' ? t('merchants.config.title') : t('merchants.clearAuth.title')}
+            </DialogTitle>
+            <DialogDescription>
+              {configAction === 'menu' ? t('merchants.config.description') : t('merchants.clearAuth.description')}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogBody className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              <span>{t('merchants.clearAuth.fields.merchantName')} </span>
+              <span className="font-medium text-foreground">{clearAuthMerchantName || '-'}</span>
+            </p>
+            {configAction === 'menu' ? (
+              <div className="grid gap-2">
+                <Button
+                  className="w-full bg-primary text-white hover:bg-primary/90 sm:w-auto sm:justify-self-start"
+                  onClick={handleOpenClearAuthForm}
+                >
+                  {t('merchants.config.actions.clearAuth')}
+                </Button>
+              </div>
+            ) : (
+              <div className="space-y-1">
+                <Label htmlFor="merchant-clear-auth-password" className="text-sm font-medium text-muted-foreground">
+                  {t('merchants.clearAuth.fields.password')}
+                </Label>
+                <div className="relative">
+                  <Input
+                    id="merchant-clear-auth-password"
+                    type={showClearAuthPassword ? 'text' : 'password'}
+                    value={clearAuthPassword}
+                    onChange={(event) => setClearAuthPassword(event.target.value)}
+                    placeholder={t('merchants.clearAuth.placeholders.password')}
+                  />
+                  <button
+                    type="button"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground"
+                    aria-label={showClearAuthPassword ? 'Hide password' : 'Show password'}
+                    onClick={() => setShowClearAuthPassword((prev) => !prev)}
+                  >
+                    {showClearAuthPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+                  </button>
+                </div>
+              </div>
+            )}
+          </DialogBody>
+          <DialogFooter className="flex flex-col gap-2 sm:flex-row sm:justify-end">
+            {configAction === 'menu' ? (
+              <Button variant="outline" onClick={() => handleClearAuthDialogChange(false)} disabled={isClearingAuth}>
+                {t('common.cancel')}
+              </Button>
+            ) : (
+              <>
+                <Button variant="outline" onClick={handleBackToConfigMenu} disabled={isClearingAuth}>
+                  {t('merchants.config.back')}
+                </Button>
+                <Button
+                  className="bg-primary text-white hover:bg-primary/90"
+                  onClick={() => void handleClearAuth()}
+                  disabled={isClearingAuth || !clearAuthPassword.trim()}
+                >
+                  {isClearingAuth ? t('common.saving') : t('merchants.clearAuth.confirm')}
+                </Button>
+              </>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>

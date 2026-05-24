@@ -236,6 +236,7 @@ export function AdminEngineListPage() {
   const [clearAuthPassword, setClearAuthPassword] = useState('');
   const [showClearAuthPassword, setShowClearAuthPassword] = useState(false);
   const [isClearingAuth, setIsClearingAuth] = useState(false);
+  const [configAction, setConfigAction] = useState<'menu' | 'clear-auth'>('menu');
   const [channelDialogOpen, setChannelDialogOpen] = useState(false);
   const [channelMerchantId, setChannelMerchantId] = useState<number | string | null>(null);
   const [channelMerchantName, setChannelMerchantName] = useState('');
@@ -660,6 +661,7 @@ export function AdminEngineListPage() {
       setClearAuthMerchantName('');
       setClearAuthPassword('');
       setShowClearAuthPassword(false);
+      setConfigAction('menu');
     }
     setClearAuthDialogOpen(open);
   };
@@ -671,6 +673,7 @@ export function AdminEngineListPage() {
     setClearAuthMerchantName(merchant.name ?? '-');
     setClearAuthPassword('');
     setShowClearAuthPassword(false);
+    setConfigAction('menu');
   }, []);
 
   const handleClearAuth = useCallback(async () => {
@@ -1806,48 +1809,71 @@ export function AdminEngineListPage() {
       <Dialog open={clearAuthDialogOpen} onOpenChange={handleClearAuthDialogChange}>
         <DialogContent className="sm:max-w-[420px]">
           <DialogHeader>
-            <DialogTitle>{t('merchants.clearAuth.title')}</DialogTitle>
-            <DialogDescription>{t('merchants.clearAuth.description')}</DialogDescription>
+            <DialogTitle>
+              {configAction === 'menu' ? t('merchants.config.title') : t('merchants.clearAuth.title')}
+            </DialogTitle>
+            <DialogDescription>
+              {configAction === 'menu' ? t('merchants.config.description') : t('merchants.clearAuth.description')}
+            </DialogDescription>
           </DialogHeader>
           <DialogBody className="space-y-4">
             <p className="text-sm text-muted-foreground">
               <span>{t('merchants.clearAuth.fields.merchantName')} </span>
               <span className="font-medium text-foreground">{clearAuthMerchantName || '-'}</span>
             </p>
-            <div className="space-y-1">
-              <Label htmlFor="merchant-clear-auth-password" className="text-sm font-medium text-muted-foreground">
-                {t('merchants.clearAuth.fields.password')}
-              </Label>
-              <div className="relative">
-                <Input
-                  id="merchant-clear-auth-password"
-                  type={showClearAuthPassword ? 'text' : 'password'}
-                  value={clearAuthPassword}
-                  onChange={(event) => setClearAuthPassword(event.target.value)}
-                  placeholder={t('merchants.clearAuth.placeholders.password')}
-                />
-                <button
-                  type="button"
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground"
-                  aria-label={showClearAuthPassword ? 'Hide password' : 'Show password'}
-                  onClick={() => setShowClearAuthPassword((prev) => !prev)}
+            {configAction === 'menu' ? (
+              <div className="grid gap-2">
+                <Button
+                  className="w-full bg-primary text-white hover:bg-primary/90 sm:w-auto sm:justify-self-start"
+                  onClick={() => setConfigAction('clear-auth')}
                 >
-                  {showClearAuthPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
-                </button>
+                  {t('merchants.config.actions.clearAuth')}
+                </Button>
               </div>
-            </div>
+            ) : (
+              <div className="space-y-1">
+                <Label htmlFor="merchant-clear-auth-password" className="text-sm font-medium text-muted-foreground">
+                  {t('merchants.clearAuth.fields.password')}
+                </Label>
+                <div className="relative">
+                  <Input
+                    id="merchant-clear-auth-password"
+                    type={showClearAuthPassword ? 'text' : 'password'}
+                    value={clearAuthPassword}
+                    onChange={(event) => setClearAuthPassword(event.target.value)}
+                    placeholder={t('merchants.clearAuth.placeholders.password')}
+                  />
+                  <button
+                    type="button"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground"
+                    aria-label={showClearAuthPassword ? 'Hide password' : 'Show password'}
+                    onClick={() => setShowClearAuthPassword((prev) => !prev)}
+                  >
+                    {showClearAuthPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+                  </button>
+                </div>
+              </div>
+            )}
           </DialogBody>
           <DialogFooter className="flex flex-col gap-2 sm:flex-row sm:justify-end">
-            <Button variant="outline" onClick={() => handleClearAuthDialogChange(false)} disabled={isClearingAuth}>
-              {t('common.cancel')}
-            </Button>
-            <Button
-              className="bg-primary text-white hover:bg-primary/90"
-              onClick={() => void handleClearAuth()}
-              disabled={isClearingAuth || !clearAuthPassword.trim()}
-            >
-              {isClearingAuth ? t('common.saving') : t('merchants.clearAuth.confirm')}
-            </Button>
+            {configAction === 'menu' ? (
+              <Button variant="outline" onClick={() => handleClearAuthDialogChange(false)} disabled={isClearingAuth}>
+                {t('common.cancel')}
+              </Button>
+            ) : (
+              <>
+                <Button variant="outline" onClick={() => setConfigAction('menu')} disabled={isClearingAuth}>
+                  {t('merchants.config.back')}
+                </Button>
+                <Button
+                  className="bg-primary text-white hover:bg-primary/90"
+                  onClick={() => void handleClearAuth()}
+                  disabled={isClearingAuth || !clearAuthPassword.trim()}
+                >
+                  {isClearingAuth ? t('common.saving') : t('merchants.clearAuth.confirm')}
+                </Button>
+              </>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>

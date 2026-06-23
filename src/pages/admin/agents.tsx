@@ -66,6 +66,11 @@ interface MerchantListResponse {
   data?: MerchantItem[];
 }
 
+interface AgentFilterOptions {
+  names: string[];
+  emails: string[];
+}
+
 const formatCurrency = (value?: number) =>
   typeof value === 'number' ? value.toLocaleString('id-ID', { style: 'currency', currency: 'IDR' }) : '-';
 
@@ -101,6 +106,8 @@ export function AdminAgentPage() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isLoadingMerchants, setIsLoadingMerchants] = useState(false);
   const [merchants, setMerchants] = useState<MerchantItem[]>([]);
+  const [agentFilterOptions, setAgentFilterOptions] = useState<AgentFilterOptions>({ names: [], emails: [] });
+  const [isLoadingAgentFilterOptions, setIsLoadingAgentFilterOptions] = useState(false);
   const [createUserDialogOpen, setCreateUserDialogOpen] = useState(false);
   const [isCreatingUser, setIsCreatingUser] = useState(false);
   const [createUserForm, setCreateUserForm] = useState({
@@ -251,14 +258,32 @@ export function AdminAgentPage() {
     [],
   );
 
-  const extractAgents = (response: AgentListResponse) => {
+  const extractAgents = useCallback((response: AgentListResponse) => {
     const payload = response.data as AgentListResponse['data'];
 
     if (Array.isArray(payload)) return payload;
     if (payload && Array.isArray(payload.data)) return payload.data;
 
     return [] as AgentItem[];
-  };
+  }, []);
+
+  const buildAgentFilterOptions = useCallback((items: AgentItem[]): AgentFilterOptions => {
+    const names = new Set<string>();
+    const emails = new Set<string>();
+
+    items.forEach((agent) => {
+      const name = agent.name?.trim();
+      const email = agent.email?.trim();
+
+      if (name) names.add(name);
+      if (email) emails.add(email);
+    });
+
+    return {
+      names: Array.from(names).sort((first, second) => first.localeCompare(second)),
+      emails: Array.from(emails).sort((first, second) => first.localeCompare(second)),
+    };
+  }, []);
 
   const fetchAgents = useCallback(async (override?: { filters?: typeof filters; page?: number; limit?: number }) => {
     const errorToastStyle = {
@@ -296,11 +321,38 @@ export function AdminAgentPage() {
       }
       setIsLoading(false);
     }
-  }, [buildFilterParams, filters, limit, page, t]);
+  }, [buildFilterParams, extractAgents, filters, limit, page, t]);
 
   useEffect(() => {
     void fetchAgents();
   }, [fetchAgents]);
+
+  const fetchAgentFilterOptions = useCallback(async () => {
+    setIsLoadingAgentFilterOptions(true);
+
+    try {
+      const response = await apiFetch<AgentListResponse>('user?page=1&limit=500');
+      setAgentFilterOptions(buildAgentFilterOptions(extractAgents(response)));
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : t('agents.toast.loadError'), {
+        duration: 1500,
+        style: {
+          border: '2px solid #fda4af',
+          background: '#fff1f2',
+          color: '#f43f5e',
+          boxShadow: '0 4px 10px rgba(244, 63, 94, 0.12)',
+          padding: '0.5rem',
+        },
+      });
+      setAgentFilterOptions({ names: [], emails: [] });
+    } finally {
+      setIsLoadingAgentFilterOptions(false);
+    }
+  }, [buildAgentFilterOptions, extractAgents, t]);
+
+  useEffect(() => {
+    void fetchAgentFilterOptions();
+  }, [fetchAgentFilterOptions]);
 
   const fetchMerchants = useCallback(async () => {
     setIsLoadingMerchants(true);
@@ -428,6 +480,7 @@ export function AdminAgentPage() {
       });
 
       await fetchAgents();
+      void fetchAgentFilterOptions();
       resetCreateUserForm();
       setCreateUserDialogOpen(false);
     } catch (error) {
@@ -576,6 +629,7 @@ export function AdminAgentPage() {
       });
 
       await fetchAgents();
+      void fetchAgentFilterOptions();
       resetEditUserForm();
       setEditUserDialogOpen(false);
     } catch (error) {
@@ -594,6 +648,7 @@ export function AdminAgentPage() {
 
     try {
       await fetchAgents();
+      void fetchAgentFilterOptions();
     } finally {
       const elapsed = Date.now() - start;
 
@@ -603,7 +658,7 @@ export function AdminAgentPage() {
 
       setIsRefreshing(false);
     }
-  }, [fetchAgents]);
+  }, [fetchAgentFilterOptions, fetchAgents]);
 
   const columnConfigs = useMemo<AgentColumnConfig[]>(
     () => [
@@ -772,21 +827,63 @@ export function AdminAgentPage() {
                 <DialogBody className="space-y-4">
                   <div className="flex flex-col gap-2">
                     <Label htmlFor="agent-filter-name">{t('agents.fields.name')}</Label>
-                    <Input
-                      id="agent-filter-name"
-                      placeholder={t('agents.filters.namePlaceholder')}
-                      value={filterInputs.name}
-                      onChange={(event) => setFilterInputs((prev) => ({ ...prev, name: event.target.value }))}
-                    />
+                    <Select
+                      value={filterInputs.name ? `name:${filterInputs.name}` : 'all'}
+                      onValueChange={(value) =>
+                        setFilterInputs((prev) => ({
+                          ...prev,
+                          name: value === 'all' ? '' : value.replace(/^name:/, ''),
+                        }))
+                      }
+                    >
+                      <SelectTrigger id="agent-filter-name" className="bg-background">
+                        <SelectValue
+                          placeholder={
+                            isLoadingAgentFilterOptions
+                              ? t('common.loading')
+                              : t('agents.filters.namePlaceholder')
+                          }
+                        />
+                      </SelectTrigger>
+                      <SelectContent className="max-h-64 overflow-y-auto">
+                        <SelectItem value="all">{t('agents.filters.nameAll')}</SelectItem>
+                        {agentFilterOptions.names.map((name) => (
+                          <SelectItem key={name} value={`name:${name}`}>
+                            {name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                   <div className="flex flex-col gap-2">
                     <Label htmlFor="agent-filter-email">{t('agents.fields.email')}</Label>
-                    <Input
-                      id="agent-filter-email"
-                      placeholder={t('agents.filters.emailPlaceholder')}
-                      value={filterInputs.email}
-                      onChange={(event) => setFilterInputs((prev) => ({ ...prev, email: event.target.value }))}
-                    />
+                    <Select
+                      value={filterInputs.email ? `email:${filterInputs.email}` : 'all'}
+                      onValueChange={(value) =>
+                        setFilterInputs((prev) => ({
+                          ...prev,
+                          email: value === 'all' ? '' : value.replace(/^email:/, ''),
+                        }))
+                      }
+                    >
+                      <SelectTrigger id="agent-filter-email" className="bg-background">
+                        <SelectValue
+                          placeholder={
+                            isLoadingAgentFilterOptions
+                              ? t('common.loading')
+                              : t('agents.filters.emailPlaceholder')
+                          }
+                        />
+                      </SelectTrigger>
+                      <SelectContent className="max-h-64 overflow-y-auto">
+                        <SelectItem value="all">{t('agents.filters.emailAll')}</SelectItem>
+                        {agentFilterOptions.emails.map((email) => (
+                          <SelectItem key={email} value={`email:${email}`}>
+                            {email}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                 </DialogBody>
                 <DialogFooter className="flex flex-col gap-2 sm:flex-row sm:justify-end">

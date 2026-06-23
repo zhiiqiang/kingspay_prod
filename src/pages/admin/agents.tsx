@@ -73,8 +73,6 @@ type AgentColumnId =
   | 'id'
   | 'name'
   | 'email'
-  | 'idMerchant'
-  | 'merchantName'
   | 'saldo'
   | 'created_at'
   | 'updated_at'
@@ -628,18 +626,6 @@ export function AdminAgentPage() {
         label: t('agents.table.email'),
         cellClassName: 'whitespace-nowrap',
         render: (agent) => agent.email || '-',
-      },
-      {
-        id: 'idMerchant',
-        label: t('agents.table.merchantId'),
-        headerClassName: 'whitespace-nowrap',
-        render: (agent) => agent.idMerchant ?? '-',
-      },
-      {
-        id: 'merchantName',
-        label: t('agents.table.merchantName'),
-        headerClassName: 'whitespace-nowrap',
-        render: (agent) => agent.merchantName ?? '-',
       },
       {
         id: 'saldo',

@@ -75,7 +75,6 @@ type AgentColumnId =
   | 'email'
   | 'idMerchant'
   | 'merchantName'
-  | 'role'
   | 'saldo'
   | 'created_at'
   | 'updated_at'
@@ -96,8 +95,8 @@ export function AdminAgentPage() {
   const [limit, setLimit] = useState(10);
   const [totalPages, setTotalPages] = useState(1);
   const [totalItems, setTotalItems] = useState<number | undefined>(0);
-  const [filters, setFilters] = useState({ name: '', email: '', idMerchant: '' });
-  const [filterInputs, setFilterInputs] = useState({ name: '', email: '', idMerchant: '' });
+  const [filters, setFilters] = useState({ name: '', email: '' });
+  const [filterInputs, setFilterInputs] = useState({ name: '', email: '' });
   const [isFilterDialogOpen, setIsFilterDialogOpen] = useState(false);
   const appliedRef = useRef(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -243,11 +242,10 @@ export function AdminAgentPage() {
   ]);
 
   const buildFilterParams = useCallback(
-    (nextFilters: { name: string; email: string; idMerchant: string }, nextPage: number, nextLimit: number) => {
+    (nextFilters: { name: string; email: string }, nextPage: number, nextLimit: number) => {
       const params = new URLSearchParams();
       if (nextFilters.email.trim()) params.set('email', nextFilters.email.trim());
       if (nextFilters.name.trim()) params.set('name', nextFilters.name.trim());
-      if (nextFilters.idMerchant.trim()) params.set('idMerchant', nextFilters.idMerchant.trim());
       params.set('page', String(nextPage));
       params.set('limit', String(nextLimit));
       return params.toString();
@@ -333,14 +331,14 @@ export function AdminAgentPage() {
   }, [fetchMerchants]);
 
   const resetFilters = () => {
-    setFilters({ name: '', email: '', idMerchant: '' });
-    setFilterInputs({ name: '', email: '', idMerchant: '' });
+    setFilters({ name: '', email: '' });
+    setFilterInputs({ name: '', email: '' });
     setPage(1);
   };
 
   const handleResetFilters = () => {
     resetFilters();
-    void fetchAgents({ filters: { name: '', email: '', idMerchant: '' }, page: 1 });
+    void fetchAgents({ filters: { name: '', email: '' }, page: 1 });
   };
 
   const handleFilterDialogChange = (open: boolean) => {
@@ -358,7 +356,6 @@ export function AdminAgentPage() {
     const nextFilters = {
       name: filterInputs.name,
       email: filterInputs.email,
-      idMerchant: filterInputs.idMerchant,
     };
     setPage(1);
     setFilters(nextFilters);
@@ -645,18 +642,6 @@ export function AdminAgentPage() {
         render: (agent) => agent.merchantName ?? '-',
       },
       {
-        id: 'role',
-        label: t('agents.table.role'),
-        headerClassName: 'whitespace-nowrap',
-        cellClassName: 'whitespace-nowrap capitalize',
-        render: (agent) =>
-          agent.role === 'user'
-            ? t('agents.roles.agent')
-            : agent.role === 'merchant'
-              ? t('agents.roles.merchant')
-              : agent.role || '-',
-      },
-      {
         id: 'saldo',
         label: t('agents.table.balance'),
         headerClassName: 'whitespace-nowrap',
@@ -737,9 +722,8 @@ export function AdminAgentPage() {
     let count = 0;
     if (filters.name.trim()) count += 1;
     if (filters.email.trim()) count += 1;
-    if (filters.idMerchant.trim()) count += 1;
     return count;
-  }, [filters.email, filters.idMerchant, filters.name]);
+  }, [filters.email, filters.name]);
 
   return (
     <div className="container space-y-8 pb-10 pt-4">
@@ -817,34 +801,6 @@ export function AdminAgentPage() {
                       value={filterInputs.email}
                       onChange={(event) => setFilterInputs((prev) => ({ ...prev, email: event.target.value }))}
                     />
-                  </div>
-                  <div className="flex flex-col gap-2">
-                    <Label htmlFor="agent-filter-merchant">{t('agents.fields.merchantId')}</Label>
-                    <Select
-                      value={filterInputs.idMerchant || 'all'}
-                      onValueChange={(value) =>
-                        setFilterInputs((prev) => ({ ...prev, idMerchant: value === 'all' ? '' : value }))
-                      }
-                      disabled={isLoadingMerchants}
-                    >
-                      <SelectTrigger id="agent-filter-merchant" className="bg-background">
-                        <SelectValue
-                          placeholder={
-                            isLoadingMerchants
-                              ? t('agents.placeholders.loadingMerchants')
-                              : t('agents.filters.merchantIdPlaceholder')
-                          }
-                        />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">{t('agents.filters.merchantAll')}</SelectItem>
-                        {merchants.map((merchant) => (
-                          <SelectItem key={merchant.id} value={String(merchant.id)}>
-                            {merchant.id} - {merchant.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
                   </div>
                 </DialogBody>
                 <DialogFooter className="flex flex-col gap-2 sm:flex-row sm:justify-end">

@@ -83,7 +83,7 @@ interface AgentItem {
 interface AgentListResponse {
   status: boolean;
   message?: string;
-  data?: AgentItem[];
+  data?: AgentItem[] | { data?: AgentItem[]; pagination?: MerchantPagination };
   pagination?: MerchantPagination;
 }
 
@@ -287,6 +287,20 @@ export function AdminEngineListPage() {
     return pagination;
   };
 
+  const extractAgents = (response: AgentListResponse) => {
+    const payload = response.data;
+    const agentList = Array.isArray(payload) ? payload : (payload?.data ?? []);
+
+    return agentList
+      .filter((agent) => agent.id != null)
+      .map((agent) => ({
+        id: agent.id,
+        name: agent.name,
+        email: agent.email,
+        role: agent.role,
+      }));
+  };
+
   const fetchMerchants = useCallback(
     async (
       abortController?: AbortController,
@@ -375,12 +389,11 @@ export function AdminEngineListPage() {
 
     setIsLoadingAgents(true);
     try {
-      const response = await apiFetch<AgentListResponse>('user?email=&name=&role=agent&idMerchant=&limit=1000', {
+      const response = await apiFetch<AgentListResponse>('user?email=&name=&role=agent&idMerchant=&page=1&limit=1000', {
         method: 'GET',
         signal: controller.signal,
       });
-      const agentList = Array.isArray(response.data) ? response.data : [];
-      setAgents(agentList.filter((agent) => agent.role === 'agent'));
+      setAgents(extractAgents(response));
     } catch (error) {
       if (error instanceof ApiAuthError) {
         toast.error(t('auth.sessionExpired'), {

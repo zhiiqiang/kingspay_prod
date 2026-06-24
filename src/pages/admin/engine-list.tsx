@@ -47,6 +47,7 @@ interface MerchantItem {
   ipPayin?: string;
   ipPayout?: string;
   idAgent?: number | string;
+  agentName?: string | null;
   status?: MerchantStatus | string;
   payinStatus?: string;
   payoutStatus?: string;
@@ -134,6 +135,7 @@ type MerchantColumnId =
   | 'feeFixed'
   | 'biayaPayout'
   | 'idAgent'
+  | 'agentName'
   | 'payinStatus'
   | 'payoutStatus'
   | 'created_at'
@@ -1095,6 +1097,13 @@ export function AdminEngineListPage() {
         label: t('merchants.table.agentId'),
         headerClassName: 'whitespace-nowrap',
         render: (merchant) => merchant.idAgent ?? '-',
+      },
+      {
+        id: 'agentName',
+        label: t('merchants.table.agentName'),
+        headerClassName: 'whitespace-nowrap min-w-[180px]',
+        cellClassName: 'whitespace-nowrap min-w-[180px]',
+        render: (merchant) => merchant.agentName ?? '-',
       },
       {
         id: 'payinStatus',
